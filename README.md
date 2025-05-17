@@ -90,9 +90,7 @@ Puoi modificarli manualmente o eliminarli per ripristinare le impostazioni inizi
 ## 🔧 TODO / Idee Future
 
 - [ ] Ricerca istantanea tra le applicazioni  
-- [ ] Scorciatoie da tastiera personalizzabili  
-- [ ] UI in QML stile Windows 11  
-- [ ] Gestione avanzata per `.desktop` corrotti o incompleti  
+- [ ] Scorciatoie da tastiera personalizzabili
 
 ---
 
