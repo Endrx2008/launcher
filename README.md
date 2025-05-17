@@ -1,4 +1,4 @@
-# 🐍 Python Application Launcher 2
+# 🐍 Python Application Launcher
 
 Un moderno **Application Launcher** scritto in **Python** con **PyQt5**, pensato per offrire un'interfaccia elegante, dark mode, gestione delle app preferite, e organizzazione per categorie. Supporta icone da temi di sistema e salvataggio delle preferenze utente.
 
