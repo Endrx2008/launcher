@@ -96,15 +96,9 @@ Puoi modificarli manualmente o eliminarli per ripristinare le impostazioni inizi
 
 ---
 
-## 🖼 Screenshot
-
-_Aggiungi uno screenshot del launcher come `screenshot.png` nella root del progetto per mostrarlo qui sopra._
-
----
-
 ## 📄 Licenza
 
-Distribuito sotto licenza **MIT**.  
+Distribuito sotto licenza **GPL**.  
 Vedi il file `LICENSE` per i dettagli.
 
 ---
