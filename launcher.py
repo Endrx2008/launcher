@@ -138,6 +138,9 @@ class AppLauncher2(QtWidgets.QMainWindow):
         self.load_preferred_apps()
         self.update_preferred_apps()
 
+        # Call the Escape key function at startup to show categories
+        self.show_categories()
+
         # App list widget
         self.app_list_widget = QtWidgets.QListWidget()
         self.app_list_widget.setIconSize(QtCore.QSize(48, 48))
@@ -171,6 +174,16 @@ class AppLauncher2(QtWidgets.QMainWindow):
 
         self.apply_dark_mode_style()
         self.installEventFilter(self)
+
+        # Install event filter on preferred_apps_widget to handle key events
+        self.preferred_apps_widget.installEventFilter(self)
+        self.category_list_widget.installEventFilter(self)
+        self.app_list_widget.installEventFilter(self)
+
+        # Set focus policy to allow key events on widgets
+        self.preferred_apps_widget.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.category_list_widget.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.app_list_widget.setFocusPolicy(QtCore.Qt.StrongFocus)
 
     def apply_dark_mode_style(self):
         if self.dark_mode:
@@ -312,6 +325,7 @@ class AppLauncher2(QtWidgets.QMainWindow):
             self.app_list_widget.addItem(list_item)
             self.app_list_widget.setItemWidget(list_item, widget)
         self.stacked_widget.setCurrentWidget(self.app_list_container)
+        self.app_list_widget.setFocus()
 
     def search_apps(self, text):
         text = text.strip().lower()
@@ -374,6 +388,7 @@ class AppLauncher2(QtWidgets.QMainWindow):
 
     def show_categories(self):
         self.stacked_widget.setCurrentWidget(self.category_page)
+        self.category_list_widget.setFocus()
 
     def load_icon(self, icon_name):
         if not icon_name:
@@ -551,17 +566,25 @@ class AppLauncher2(QtWidgets.QMainWindow):
 
     def eventFilter(self, source, event):
         if event.type() == QtCore.QEvent.KeyPress:
-            if source is self.category_list_widget or source is self.app_list_widget:
+            if event.key() == QtCore.Qt.Key_Escape:
+                self.show_categories()
+                return True
+            if source is self.category_list_widget:
+                if event.key() in (QtCore.Qt.Key_Return, QtCore.Qt.Key_Enter):
+                    item = source.currentItem()
+                    if item:
+                        self.show_category_apps(item)
+                    return True
+            elif source is self.app_list_widget or source is self.preferred_apps_widget:
                 if event.key() in (QtCore.Qt.Key_Return, QtCore.Qt.Key_Enter):
                     item = source.currentItem()
                     if item:
                         self.launch_selected(item)
                     return True
-                elif event.key() == QtCore.Qt.Key_Escape:
-                    if source is self.app_list_widget:
-                        self.show_categories()
-                    else:
-                        self.close()
+                elif event.key() == QtCore.Qt.Key_Underscore or (event.key() == QtCore.Qt.Key_Minus and event.modifiers() & QtCore.Qt.ShiftModifier):
+                    item = source.currentItem()
+                    if item:
+                        self.launch_selected(item)
                     return True
         return super().eventFilter(source, event)
 
