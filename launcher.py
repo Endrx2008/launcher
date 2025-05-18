@@ -145,6 +145,7 @@ class AppLauncher2(QtWidgets.QMainWindow):
         self.app_list_widget = QtWidgets.QListWidget()
         self.app_list_widget.setIconSize(QtCore.QSize(48, 48))
         self.app_list_widget.itemDoubleClicked.connect(self.launch_selected)
+        self.app_list_widget.currentItemChanged.connect(self.update_app_list_selection_background)
 
         # Back button for app list
         self.back_button = QtWidgets.QPushButton("Back to Home")
@@ -198,9 +199,10 @@ class AppLauncher2(QtWidgets.QMainWindow):
                 }
                 QListWidget::item:selected {
                     background-color: #5a5a5a;
+                    color: white;
                 }
                 QLabel {
-                    color: #a0a0ff;
+                    color: #a0a0a0;
                 }
             """
             self.setStyleSheet(dark_style)
@@ -423,6 +425,10 @@ class AppLauncher2(QtWidgets.QMainWindow):
             self.setStyleSheet("")
             self.dark_mode = False
         self.update_toggle_icon()
+        # Update selection background color for app_list_widget
+        current_item = self.app_list_widget.currentItem()
+        previous_item = None  # No previous item on toggle
+        self.update_app_list_selection_background(current_item, previous_item)
 
     def update_toggle_icon(self):
         if self.dark_mode:
@@ -587,6 +593,21 @@ class AppLauncher2(QtWidgets.QMainWindow):
                         self.launch_selected(item)
                     return True
         return super().eventFilter(source, event)
+
+    def update_app_list_selection_background(self, current, previous):
+        # Reset previous item's widget background
+        if previous:
+            prev_widget = self.app_list_widget.itemWidget(previous)
+            if prev_widget:
+                prev_widget.setStyleSheet("")
+        # Set current item's widget background to gray or blue with white text based on dark_mode
+        if current:
+            curr_widget = self.app_list_widget.itemWidget(current)
+            if curr_widget:
+                if self.dark_mode:
+                    curr_widget.setStyleSheet("background-color: #5a5a5a; color: white;")
+                else:
+                    curr_widget.setStyleSheet("background-color: #3a6efb; color: white;")
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
