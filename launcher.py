@@ -12,7 +12,7 @@ class AppLauncher2(QtWidgets.QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Python Application Launcher 2")
+        self.setWindowTitle("Python Application Launcher")
         self.resize(800, 600)
 
         self.applications = self.find_applications()
@@ -32,13 +32,69 @@ class AppLauncher2(QtWidgets.QMainWindow):
         self.category_layout = QtWidgets.QVBoxLayout()
         self.category_page.setLayout(self.category_layout)
 
+        # Add system control icons layout above the Home label
+        self.system_icons_layout = QtWidgets.QHBoxLayout()
+        self.system_icons_layout.setSpacing(20)
+        self.system_icons_layout.setAlignment(QtCore.Qt.AlignCenter)
+
+        # Helper function to create icon label with click event
+        def create_icon_label(icon_name, tooltip, callback):
+            label = QtWidgets.QLabel()
+            icon = self.load_icon(icon_name)
+            pixmap = icon.pixmap(20, 20)
+            label.setPixmap(pixmap)
+            label.setToolTip(tooltip)
+            label.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+            label.mousePressEvent = lambda event: callback()
+            return label
+
+        # Define system action callbacks
+        def shutdown():
+            subprocess.Popen(['systemctl', 'poweroff'])
+
+        def reboot():
+            subprocess.Popen(['systemctl', 'reboot'])
+
+        def suspend():
+            subprocess.Popen(['systemctl', 'suspend'])
+
+        # Create icon labels
+        shutdown_icon = create_icon_label('system-shutdown', 'Shutdown', shutdown)
+        reboot_icon = create_icon_label('system-reboot', 'Reboot', reboot)
+        suspend_icon = create_icon_label('system-suspend', 'Suspend', suspend)
+
+        # Add icons to layout
+        self.system_icons_layout.addWidget(shutdown_icon)
+        self.system_icons_layout.addWidget(reboot_icon)
+        self.system_icons_layout.addWidget(suspend_icon)
+
+        # Create a horizontal layout to hold the icons on the left and the Home label on the right
+        self.top_layout = QtWidgets.QHBoxLayout()
+        self.top_layout.setSpacing(10)
+        self.top_layout.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+
+        # Add the system icons layout to the left of the top layout
+        self.top_layout.addLayout(self.system_icons_layout)
+
+        # Add stretch to push the Home label to center
+        self.top_layout.addStretch(1)
+
+        # Create the Home label
         self.category_title = QtWidgets.QLabel("Home")
         font = self.category_title.font()
         font.setPointSize(16)
         font.setBold(True)
         self.category_title.setFont(font)
         self.category_title.setAlignment(QtCore.Qt.AlignCenter)
-        self.category_layout.addWidget(self.category_title)
+
+        # Add the Home label to the top layout
+        self.top_layout.addWidget(self.category_title)
+
+        # Add another stretch to keep the Home label centered
+        self.top_layout.addStretch(1)
+
+        # Add the combined top layout to the category layout
+        self.category_layout.addLayout(self.top_layout)
 
         # Preferred apps widget on home page
         self.preferred_apps_widget = QtWidgets.QListWidget()
@@ -61,6 +117,21 @@ class AppLauncher2(QtWidgets.QMainWindow):
         self.category_list_widget.itemClicked.connect(self.show_category_apps)
         self.category_list_widget.model().rowsMoved.connect(self.category_order_changed)
         self.category_layout.addWidget(self.category_list_widget)
+
+        # Add search box and send button under the category list widget
+        search_layout = QtWidgets.QHBoxLayout()
+        self.search_box = QtWidgets.QLineEdit()
+        self.search_box.setPlaceholderText("Search apps by name...")
+        self.search_box.setMinimumWidth(200)
+        self.search_box.returnPressed.connect(self.search_apps)
+        search_layout.addWidget(self.search_box)
+
+        self.send_button = QtWidgets.QPushButton("Search")
+        self.send_button.setFixedWidth(60)
+        self.send_button.clicked.connect(self.search_apps)
+        search_layout.addWidget(self.send_button)
+
+        self.category_layout.addLayout(search_layout)
 
         self.stacked_widget.addWidget(self.category_page)
 
@@ -109,7 +180,7 @@ class AppLauncher2(QtWidgets.QMainWindow):
                     color: #f0f0f0;
                 }
                 QListWidget {
-                    background-color: #3c3c3c;
+                    background-color: #2b2b2b;
                     color: #f0f0f0;
                 }
                 QListWidget::item:selected {
@@ -130,7 +201,7 @@ class AppLauncher2(QtWidgets.QMainWindow):
             os.path.expanduser("~/.local/share/applications"),
             "/usr/local/share/applications"
         ]
-        blacklist = {"i3", "gnome-shell", "plasmashell", "xfce4-panel", "lxpanel"}
+        blacklist = {"i3", "gnome-shell", "plasmashell", "xfce4-panel", "lxpanel", "portal", "desktop"}
 
         for d in desktop_dirs:
             if os.path.isdir(d):
@@ -196,6 +267,10 @@ class AppLauncher2(QtWidgets.QMainWindow):
             icon = QtGui.QIcon.fromTheme("folder")
             if not icon.isNull():
                 item.setIcon(icon)
+            font = item.font()
+            font.setPointSize(11)  # Increase font size for better visibility
+            item.setFont(font)
+            item.setSizeHint(QtCore.QSize(item.sizeHint().width(), 50))  # Increase height for better selection
             self.category_list_widget.addItem(item)
 
     def show_category_apps(self, item):
@@ -220,6 +295,65 @@ class AppLauncher2(QtWidgets.QMainWindow):
             layout.addStretch()
 
             # Determine button text based on preferred status
+            btn_text = "-" if app in self.preferred_apps else "+"
+            plus_button = QtWidgets.QPushButton(btn_text)
+            plus_button.setFixedSize(24, 24)
+            plus_button.setFlat(True)
+            plus_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+            plus_button.clicked.connect(lambda checked, a=app, b=plus_button: self.plus_button_clicked(a, b))
+            layout.addWidget(plus_button)
+
+            widget.setLayout(layout)
+
+            list_item = QtWidgets.QListWidgetItem()
+            list_item.setSizeHint(widget.sizeHint())
+            list_item.setData(QtCore.Qt.UserRole, app)
+
+            self.app_list_widget.addItem(list_item)
+            self.app_list_widget.setItemWidget(list_item, widget)
+        self.stacked_widget.setCurrentWidget(self.app_list_container)
+
+    def search_apps(self, text):
+        text = text.strip().lower()
+        self.app_list_widget.clear()
+        if not text:
+            # If search box is empty, show categories in category list widget and keep category page visible
+            self.populate_categories()
+            self.stacked_widget.setCurrentWidget(self.category_page)
+            return
+        # Filter apps by name containing the search text
+        filtered_apps = [app for app in self.applications if text in app['name'].lower()]
+        for app in sorted(filtered_apps, key=lambda x: x['name'].lower()):
+            widget = QtWidgets.QWidget()
+            layout = QtWidgets.QHBoxLayout()
+            layout.setContentsMargins(5, 2, 5, 2)
+            
+    def search_apps(self):
+        text = self.search_box.text().strip().lower()
+        self.app_list_widget.clear()
+        if not text:
+            # If search box is empty, show categories in category list widget and keep category page visible
+            self.populate_categories()
+            self.stacked_widget.setCurrentWidget(self.category_page)
+            return
+        # Filter apps by name containing the search text
+        filtered_apps = [app for app in self.applications if text in app['name'].lower()]
+        for app in sorted(filtered_apps, key=lambda x: x['name'].lower()):
+            widget = QtWidgets.QWidget()
+            layout = QtWidgets.QHBoxLayout()
+            layout.setContentsMargins(5, 2, 5, 2)
+
+            icon_label = QtWidgets.QLabel()
+            icon = self.load_icon(app['icon'])
+            pixmap = icon.pixmap(48, 48)
+            icon_label.setPixmap(pixmap)
+            layout.addWidget(icon_label)
+
+            name_label = QtWidgets.QLabel(app['name'])
+            layout.addWidget(name_label)
+
+            layout.addStretch()
+
             btn_text = "-" if app in self.preferred_apps else "+"
             plus_button = QtWidgets.QPushButton(btn_text)
             plus_button.setFixedSize(24, 24)
@@ -268,24 +402,8 @@ class AppLauncher2(QtWidgets.QMainWindow):
 
     def toggle_dark_mode(self):
         if not self.dark_mode:
-            dark_style = """
-                QWidget {
-                    background-color: #2b2b2b;
-                    color: #f0f0f0;
-                }
-                QListWidget {
-                    background-color: #3c3c3c;
-                    color: #f0f0f0;
-                }
-                QListWidget::item:selected {
-                    background-color: #5a5a5a;
-                }
-                QLabel {
-                    color: #a0a0ff;
-                }
-            """
-            self.setStyleSheet(dark_style)
             self.dark_mode = True
+            self.apply_dark_mode_style()
         else:
             self.setStyleSheet("")
             self.dark_mode = False
@@ -316,7 +434,7 @@ class AppLauncher2(QtWidgets.QMainWindow):
             self.preferred_apps.append(app)
             self.update_preferred_apps()
         else:
-            QtWidgets.QMessageBox.information(self, "Info", f"App '{app['name']}' is already in preferred list.")
+            QtWidgets.QMessageBox.information(self, "System error.")
 
     def plus_button_clicked(self, app, button):
         if app not in self.preferred_apps:
@@ -376,12 +494,60 @@ class AppLauncher2(QtWidgets.QMainWindow):
 
     def update_preferred_apps(self):
         self.preferred_apps_widget.clear()
+        count = len(self.preferred_apps)
+        if count == 0:
+            return
+
+        # Determine icon size based on number of preferred apps
+        max_icon_size = 64
+        min_icon_size = 48
+
+        # Calculate available width and estimate needed width per item with icon+name
+        available_width = self.preferred_apps_widget.width()
+        # Estimate width per item: icon size + approx 80 pixels for text + spacing
+        estimated_item_width = max_icon_size + 80
+        total_needed_width = estimated_item_width * count
+
+        # Decide if show names or only icons based on available width
+        show_names = total_needed_width <= available_width
+
+        if show_names:
+            icon_size = max(min_icon_size, max_icon_size // count)
+        else:
+            # If not enough space, reduce icon size and show only icons
+            icon_size = max(min_icon_size, max_icon_size // (count * 2))
+
+        self.preferred_apps_widget.setIconSize(QtCore.QSize(icon_size, icon_size))
+
+        # Adjust preferred_apps_widget height based on icon size
+        height = icon_size + 20  # some padding
+        self.preferred_apps_widget.setFixedHeight(height)
+
         for app in self.preferred_apps:
-            item = QtWidgets.QListWidgetItem(app['name'])
-            icon = self.load_icon(app['icon'])
-            item.setIcon(icon)
-            item.setData(QtCore.Qt.UserRole, app)
-            self.preferred_apps_widget.addItem(item)
+            if not show_names or icon_size <= 24:
+                # Show only icon, no text
+                item = QtWidgets.QListWidgetItem()
+                icon = self.load_icon(app['icon'])
+                item.setIcon(icon)
+                item.setData(QtCore.Qt.UserRole, app)
+                self.preferred_apps_widget.addItem(item)
+            else:
+                # Show icon and name
+                item = QtWidgets.QListWidgetItem(app['name'])
+                icon = self.load_icon(app['icon'])
+                item.setIcon(icon)
+                item.setData(QtCore.Qt.UserRole, app)
+                self.preferred_apps_widget.addItem(item)
+
+        # Center the items if only one preferred app
+        if count == 1:
+            self.preferred_apps_widget.setFlow(QtWidgets.QListView.LeftToRight)
+            self.preferred_apps_widget.setSpacing(10)
+            self.preferred_apps_widget.setStyleSheet("QListWidget::item { margin-left: auto; margin-right: auto; }")
+        else:
+            self.preferred_apps_widget.setFlow(QtWidgets.QListView.LeftToRight)
+            self.preferred_apps_widget.setSpacing(5)
+            self.preferred_apps_widget.setStyleSheet("")
 
     def eventFilter(self, source, event):
         if event.type() == QtCore.QEvent.KeyPress:
