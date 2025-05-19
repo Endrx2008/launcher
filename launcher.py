@@ -23,6 +23,9 @@ class AppLauncher2(QtWidgets.QMainWindow):
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.config_file = self.config_dir / "preferred_apps.json"
         self.category_order_file = self.config_dir / "categories_order.json"
+        self.theme_config_file = self.config_dir / "theme_config.json"
+
+        self.load_theme_config()
 
         self.stacked_widget = QtWidgets.QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
@@ -124,7 +127,6 @@ class AppLauncher2(QtWidgets.QMainWindow):
         self.load_category_order()
         self.populate_categories()
 
-        self.dark_mode = True
         self.toggle_button = QtWidgets.QPushButton(self)
         self.toggle_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.toggle_button.setFixedSize(32, 32)
@@ -322,6 +324,32 @@ class AppLauncher2(QtWidgets.QMainWindow):
             self.setStyleSheet("")
         self.update_toggle_icon()
         self.update_app_list_selection_background(self.app_list_widget.currentItem(), None)
+        self.save_theme_config()
+
+    def load_theme_config(self):
+        try:
+            if self.theme_config_file.exists():
+                with open(self.theme_config_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                theme = data.get("theme", "dark")
+                self.dark_mode = (theme == "dark")
+            else:
+                self.dark_mode = True
+            if self.dark_mode:
+                self.apply_dark_mode_style()
+            else:
+                self.setStyleSheet("")
+            self.update_toggle_icon()
+        except Exception as e:
+            print(f"Error loading theme config: {e}")
+
+    def save_theme_config(self):
+        try:
+            data = {"theme": "dark" if self.dark_mode else "light"}
+            with open(self.theme_config_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f)
+        except Exception as e:
+            print(f"Error saving theme config: {e}")
 
     def update_toggle_icon(self):
         icon_name = "weather-clear" if self.dark_mode else "weather-clear-night"
@@ -419,6 +447,32 @@ class AppLauncher2(QtWidgets.QMainWindow):
 
     def eventFilter(self, source, event):
         if event.type() == QtCore.QEvent.KeyPress:
+            # Detect Control+C
+            if event.key() == QtCore.Qt.Key_C and event.modifiers() & QtCore.Qt.ControlModifier:
+                # Launch calcolatrice.py
+                try:
+                    import pathlib
+                    script_dir = pathlib.Path(__file__).parent.resolve()
+                    calcolatrice_path = script_dir / "multicalculator_ui.py"
+                    if calcolatrice_path.exists():
+                        subprocess.Popen([sys.executable, str(calcolatrice_path)])
+                        self.close()
+                    else:
+                        QtWidgets.QMessageBox.warning(self, "File Not Found", f"Calculator file not found in {calcolatrice_path}")
+                except Exception as e:
+                    QtWidgets.QMessageBox.critical(self, "Error", f"Failed to launch calculator app.\n{e}")
+                return True
+
+            # Detect Control+T for theme toggle
+            if event.key() == QtCore.Qt.Key_T and event.modifiers() & QtCore.Qt.ControlModifier:
+                self.toggle_dark_mode()
+                return True
+
+            # Detect Control+I for shortcuts display
+            if event.key() == QtCore.Qt.Key_I and event.modifiers() & QtCore.Qt.ControlModifier:
+                self.show_shortcuts()
+                return True
+
             if event.key() == QtCore.Qt.Key_Escape:
                 self.show_categories()
                 return True
@@ -433,6 +487,17 @@ class AppLauncher2(QtWidgets.QMainWindow):
                     self.launch_selected(item)
                 return True
         return super().eventFilter(source, event)
+
+    def show_shortcuts(self):
+        from PyQt5.QtWidgets import QMessageBox
+        shortcuts_text = (
+            "Shortcuts:\n"
+            "Ctrl+T: Toggle theme (Light/Dark)\n"
+            "Ctrl+C: Launch The multicalculator\n"
+            "Escape: Show Categories (home)\n"
+            "Ctrl+I: Show this shortcuts window\n"
+        )
+        QMessageBox.information(self, "Keyboard Shortcuts", shortcuts_text)
 
     def update_app_list_selection_background(self, current, previous):
         if previous:
