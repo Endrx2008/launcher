@@ -23,9 +23,10 @@ class Calculator(QWidget):
 
         buttons_widget = QWidget()
         grid = QGridLayout(buttons_widget)
-        grid.setSpacing(3)
+        spacing = 5
+        grid.setSpacing(spacing)
         grid.setContentsMargins(0, 0, 0, 0)
-
+        
         # Windows calculator standard layout buttons
         buttons = {
             'MC': (0, 0),
@@ -70,7 +71,7 @@ class Calculator(QWidget):
             if btn_text == '0':
                 button.setMinimumSize(110, 50)
             elif btn_text == '=':
-                button.setMinimumSize(50, 110)
+                button.setMinimumSize(50, 100 + spacing)
             else:
                 button.setMinimumSize(50, 50)
             button.setSizePolicy(button.sizePolicy().horizontalPolicy(), button.sizePolicy().verticalPolicy())
@@ -489,7 +490,7 @@ class MultiCalculatorApp(QWidget):
             self.label_toggle_theme.setStyleSheet("color: black; text-decoration: none; padding: 5px;")
 
     def back_to_home(self):
-        # Launch launcher2.py and close current app
+        # Launch launcher.py and close current app
         subprocess.Popen([sys.executable, "/home/endrx/Scrivania/codes/python/pyblauncher/newlauncher/launcher.py"])
         self.close()
 
