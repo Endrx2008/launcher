@@ -125,3 +125,6 @@ Window Manager alternativo: i3
 ## 📬 Contatti
 
 Per feedback o suggerimenti: apri un’issue o scrivi un commento nel repository.
+
+## 👥 Collaboratori
+- maraMAU (per aver corretto un bug nella UI della calcolatrice)
