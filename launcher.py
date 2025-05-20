@@ -9,7 +9,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 
 ICON_DIR = "/usr/share/icons/Sours-Full-Color/apps/scalable"
 
-class AppLauncher2(QtWidgets.QMainWindow):
+class AppLauncher(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Python Application Launcher")
@@ -514,7 +514,7 @@ import json
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    launcher = AppLauncher2()
+    launcher = AppLauncher()
     launcher.show()
 
     shortcuts_flag_file = launcher.config_dir / "shortcuts_shown.json"
