@@ -89,8 +89,8 @@ Puoi modificarli manualmente o eliminarli per ripristinare le impostazioni inizi
 
 ## 🔧 TODO / Idee Future
 
-- [ ] Ricerca istantanea tra le applicazioni  
-- [ ] Scorciatoie da tastiera personalizzabili
+- [x] Ricerca istantanea tra le applicazioni  
+- [x] Scorciatoie da tastiera personalizzabili
 
 ---
 
