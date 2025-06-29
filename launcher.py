@@ -515,6 +515,27 @@ import json
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     launcher = AppLauncher()
+
+    guide_flag_file = launcher.config_dir / "guide.json"
+    show_guide = True
+    if guide_flag_file.exists():
+        try:
+            with open(guide_flag_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            show_guide = not data.get("shown", False)
+        except Exception:
+            show_guide = True
+
+    if show_guide:
+        try:
+            import pathlib
+            script_dir = pathlib.Path(__file__).parent.resolve()
+            subprocess.Popen([sys.executable, script_dir / "guide/visualizer.py"])
+            with open(guide_flag_file, 'w', encoding='utf-8') as f:
+                json.dump({"shown": True}, f)
+        except Exception as e:
+            print(f"Error launching guide visualizer or writing guide flag: {e}")
+
     launcher.show()
 
     shortcuts_flag_file = launcher.config_dir / "shortcuts_shown.json"
