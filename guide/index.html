@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Master Key System Usage Guide</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f7f8;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  h1 {
+    color: #2c3e50;
+  }
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 30px;
+  }
+  .key-combo {
+    background-color: #ecf0f1;
+    border-left: 6px solid #2980b9;
+    margin-bottom: 20px;
+    padding: 15px 20px;
+    border-radius: 4px;
+  }
+  .key-combo:first-child {
+    border-left-color: #e67e22;
+  }
+  .key-combo:first-child h2 {
+    color: #e67e22;
+  }
+  .key-combo:first-child .key {
+    background: #e67e22;
+  }
+  .key-combo h2 {
+    margin-top: 0;
+    font-size: 1.2em;
+    color: #2980b9;
+  }
+  .key {
+    display: inline-block;
+    background: #3498db;
+    color: white;
+    font-weight: bold;
+    padding: 5px 12px;
+    border-radius: 4px;
+    margin-right: 8px;
+    font-family: monospace;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  }
+  p {
+    margin: 10px 0 0 0;
+    font-size: 1em;
+  }
+  footer {
+    text-align: center;
+    margin-top: 50px;
+    font-size: 0.9em;
+    color: #777;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Master Key System Usage Guide</h1>
+  <p>Learn how to use the Skorpion_Os lite system, with function keys to control your system.</p>
+</header>
+<div class="container">
+  <div class="key-combo">
+    <h2>Master Key</h2>
+    <p><span class="key">Alt</span>
+    <p>ALT IS THE MASTER KEY</p>
+  </div>
+  <div class="key-combo">
+    <h2>Open Launcher</h2>
+    <p><span class="key">Alt</span> + <span class="key">F1</span></p>
+    <p>Press the Master Key and F1 together to open the launcher.</p>
+  </div>
+  <div class="key-combo">
+    <h2>Close Last Clicked Window</h2>
+    <p><span class="key">Alt</span> + <span class="key">F5</span></p>
+    <p>Press the Master Key and F5 together to close the last window you clicked on.</p>
+  </div>
+  <div class="key-combo">
+    <h2>Launch Firefox</h2>
+    <p><span class="key">Alt</span> + <span class="key">F7</span></p>
+    <p>Press the Master Key and F7 together to launch Firefox browser.</p>
+  </div>
+  <div class="key-combo">
+    <h2>Open Terminal</h2>
+    <p><span class="key">Alt</span> + <span class="key">F10</span></p>
+    <p>Press the Master Key and F10 together to open the terminal.</p>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span id="modal-close" class="modal-close">&times;</span>
+      <h2 id="modal-title"></h2>
+      <p id="modal-description"></p>
+    </div>
+  </div>
+
+  <p style="text-align:center; margin-top: 20px; font-size: 0.9em; color: #555;">
+    For closing this guide press ( <span class="key">alt</span>+ <span class="key">f5</span>)
+  </p>
+
+  <p style="text-align:center; margin-top: 20px; font-size: 0.9em; color: #555;">
+    For opening this guide press ( <span class="key">alt</span>+ <span class="key">f2</span>)
+  </p>
+
+  <footer>
+    &copy; 2025 Skorpion_Os lite usage giude
+  </footer>
+
+  <script>
+    // Modal elements
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalDescription = document.getElementById('modal-description');
+    const modalClose = document.getElementById('modal-close');
+
+    // Data for each key combo
+    const keyComboData = {
+      'open-launcher': {
+        title: 'Open Launcher',
+        description: 'Press the Master Key and F1 together to open the launcher. This will bring up the system launcher where you can search and open applications quickly.'
+      },
+      'close-window': {
+        title: 'Close Last Clicked Window',
+        description: 'Press the Master Key and F5 together to close the last window you clicked on..'
+      },
+      'launch-firefox': {
+        title: 'Launch Firefox',
+        description: 'Press the Master Key and F7 together to launch the Firefox browser. This shortcut quickly opens your default web browser.'
+      },
+      'open-terminal': {
+        title: 'Open Terminal',
+        description: 'Press the Master Key and F10 together to open the terminal. This shortcut opens a command line terminal for advanced system control.'
+      },
+      'master key': {
+        title: 'Master key',
+        description: 'ALT IS THE MASTER KEY'
+      }
+    };
+
+    // Function to open modal with content
+    function openModal(key) {
+      const data = keyComboData[key];
+      if (data) {
+        modalTitle.textContent = data.title;
+        modalDescription.textContent = data.description;
+        modal.style.display = 'block';
+      }
+    }
+
+    // Close modal on close button click
+    modalClose.onclick = function() {
+      modal.style.display = 'none';
+    };
+
+    // Close modal on outside click
+    window.onclick = function(event) {
+      if (event.target == modal) {
+        modal.style.display = 'none';
+      }
+    };
+
+    // Add click listeners to key combo containers
+    document.querySelectorAll('.key-combo').forEach((element, index) => {
+      const keys = ['master key', 'open-launcher', 'close-window', 'launch-firefox', 'open-terminal'];
+      element.style.cursor = 'pointer';
+      element.addEventListener('click', () => openModal(keys[index]));
+    });
+  </script>
+
+  <style>
+    /* Modal styles */
+    .modal {
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background-color: #fff;
+      padding: 20px 30px;
+      border-radius: 8px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #aaa;
+      cursor: pointer;
+      user-select: none;
+    }
+    .modal-close:hover {
+      color: #000;
+    }
+  </style>
+</body>
+</html>
