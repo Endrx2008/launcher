@@ -7,7 +7,26 @@ import pathlib
 from functools import partial
 from PyQt5 import QtWidgets, QtGui, QtCore
 
-ICON_DIR = "/usr/share/icons/Sours-Full-Color/apps/scalable"
+ICON_DIR = "/usr/share/icons/Ars-Dark-Icons/apps/48"
+SPECIAL_ICON_DIR = "/usr/share/icons/Sours-Full-Color/apps/scalable"
+
+def load_special_icon(icon_name):
+    """Carica un'icona speciale da SPECIAL_ICON_DIR con estensioni comuni."""
+    for ext in ['png', 'svg', 'xpm']:
+        icon_path = os.path.join(SPECIAL_ICON_DIR, f"{icon_name}.{ext}")
+        if os.path.isfile(icon_path):
+            return QtGui.QIcon(icon_path)
+    return QtGui.QIcon()  # fallback se non trova nulla
+
+def create_special_icon_label(icon_name, tooltip, callback):
+    """Crea un QLabel cliccabile con icona speciale."""
+    label = QtWidgets.QLabel()
+    icon = load_special_icon(icon_name)
+    label.setPixmap(icon.pixmap(20, 20))
+    label.setToolTip(tooltip)
+    label.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+    label.mousePressEvent = lambda event: callback()
+    return label
 
 class AppLauncher(QtWidgets.QMainWindow):
     def __init__(self):
@@ -30,25 +49,24 @@ class AppLauncher(QtWidgets.QMainWindow):
         self.stacked_widget = QtWidgets.QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
 
+        # Pagina categorie
         self.category_page = QtWidgets.QWidget()
         self.category_layout = QtWidgets.QVBoxLayout(self.category_page)
 
+        # Barra icone di sistema
         self.system_icons_layout = QtWidgets.QHBoxLayout()
         self.system_icons_layout.setSpacing(20)
         self.system_icons_layout.setAlignment(QtCore.Qt.AlignCenter)
 
-        def create_icon_label(icon_name, tooltip, callback):
-            label = QtWidgets.QLabel()
-            icon = self.load_icon(icon_name)
-            label.setPixmap(icon.pixmap(20, 20))
-            label.setToolTip(tooltip)
-            label.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-            label.mousePressEvent = lambda event: callback()
-            return label
-
-        self.system_icons_layout.addWidget(create_icon_label('system-shutdown', 'Shutdown', lambda: subprocess.Popen(['systemctl', 'poweroff'])))
-        self.system_icons_layout.addWidget(create_icon_label('system-reboot', 'Reboot', lambda: subprocess.Popen(['systemctl', 'reboot'])))
-        self.system_icons_layout.addWidget(create_icon_label('system-suspend', 'Suspend', lambda: subprocess.Popen(['systemctl', 'suspend'])))
+        self.system_icons_layout.addWidget(
+            create_special_icon_label('system-shutdown', 'Shutdown', lambda: subprocess.Popen(['systemctl', 'poweroff']))
+        )
+        self.system_icons_layout.addWidget(
+            create_special_icon_label('system-reboot', 'Reboot', lambda: subprocess.Popen(['systemctl', 'reboot']))
+        )
+        self.system_icons_layout.addWidget(
+            create_special_icon_label('system-suspend', 'Suspend', lambda: subprocess.Popen(['systemctl', 'suspend']))
+        )
 
         self.top_layout = QtWidgets.QHBoxLayout()
         self.top_layout.setSpacing(10)
