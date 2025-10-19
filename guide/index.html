@@ -33,6 +33,11 @@
     margin-bottom: 20px;
     padding: 15px 20px;
     border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .key-combo:hover {
+    background-color: #e0e6e8;
   }
   .key-combo:first-child {
     border-left-color: #e67e22;
@@ -69,6 +74,52 @@
     font-size: 0.9em;
     color: #777;
   }
+
+  /* Modal styles */
+  .modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .modal.show {
+    display: flex;
+    opacity: 1;
+  }
+  .modal-content {
+    background-color: #fff;
+    padding: 20px 30px;
+    border-radius: 8px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    position: relative;
+  }
+  .modal-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    user-select: none;
+  }
+  .modal-close:hover {
+    color: #000;
+  }
+  #modal-description {
+    white-space: pre-line; /* Rispetta \n */
+  }
 </style>
 </head>
 <body>
@@ -77,34 +128,17 @@
   <p>Learn how to use the Skorpion_Os lite system, with function keys to control your system.</p>
 </header>
 <div class="container">
-  <div class="key-combo">
-    <h2>Master Key</h2>
-    <p><span class="key">Alt</span>
-    <p>ALT IS THE MASTER KEY</p>
-  </div>
-  <div class="key-combo">
-    <h2>Open Launcher</h2>
-    <p><span class="key">Alt</span> + <span class="key">F1</span></p>
-    <p>Press the Master Key and F1 together to open the launcher.</p>
-  </div>
-  <div class="key-combo">
-    <h2>Close Last Clicked Window</h2>
-    <p><span class="key">Alt</span> + <span class="key">F5</span></p>
-    <p>Press the Master Key and F5 together to close the last window you clicked on.</p>
-  </div>
-  <div class="key-combo">
-    <h2>Launch Firefox</h2>
-    <p><span class="key">Alt</span> + <span class="key">F7</span></p>
-    <p>Press the Master Key and F7 together to launch Firefox browser.</p>
-  </div>
-  <div class="key-combo">
-    <h2>Open Terminal</h2>
-    <p><span class="key">Alt</span> + <span class="key">F10</span></p>
-    <p>Press the Master Key and F10 together to open the terminal.</p>
-  </div>
+  <div class="key-combo"><h2>Master Key</h2><p><span class="key">Alt</span></p><p>ALT IS THE MASTER KEY</p></div>
+  <div class="key-combo"><h2>Open Launcher</h2><p><span class="key">Alt</span> + <span class="key">F1</span></p><p>Press the Master Key and F1 together to open the launcher.</p></div>
+  <div class="key-combo"><h2>Open the fm</h2><p><span class="key">Alt</span> + <span class="key">F2</span></p><p>Press the Master Key and F2 together to open pcmanfm.</p></div>
+  <div class="key-combo"><h2>Open Guide</h2><p><span class="key">Alt</span> + <span class="key">F3</span></p><p>Press the Master Key and F3 together to open this guide.</p></div>
+  <div class="key-combo"><h2>Close Window</h2><p><span class="key">Alt</span> + <span class="key">F5</span></p><p>Press the Master Key and F5 together to close programs.</p></div>
+  <div class="key-combo"><h2>Launch Firefox</h2><p><span class="key">Alt</span> + <span class="key">F7</span></p><p>Press the Master Key and F7 together to launch Firefox browser.</p></div>
+  <div class="key-combo"><h2>Open Terminal</h2><p><span class="key">Alt</span> + <span class="key">F10</span></p><p>Press the Master Key and F10 together to open the terminal.</p></div>
+  <div class="key-combo"><h2>Change configuration</h2><p><span class="key">Alt</span> + <span class="key">F11</span></p><p>Press the Master Key and F11 together to change this configuration.</p></div>
 
   <!-- Modal -->
-  <div id="modal" class="modal" style="display:none;">
+  <div id="modal" class="modal">
     <div class="modal-content">
       <span id="modal-close" class="modal-close">&times;</span>
       <h2 id="modal-title"></h2>
@@ -113,115 +147,81 @@
   </div>
 
   <p style="text-align:center; margin-top: 20px; font-size: 0.9em; color: #555;">
-    For closing this guide press ( <span class="key">alt</span>+ <span class="key">f5</span>)
+    For closing this guide press (<span class="key">Alt</span> + <span class="key">F5</span>)
   </p>
-
   <p style="text-align:center; margin-top: 20px; font-size: 0.9em; color: #555;">
-    For opening this guide press ( <span class="key">alt</span>+ <span class="key">f2</span>)
+    For opening this guide press (<span class="key">Alt</span> + <span class="key">F3</span>)
   </p>
+  <footer>&copy; Skorpion_Os lite usage guide</footer>
+</div>
 
-  <footer>
-    &copy; 2025 Skorpion_Os lite usage giude
-  </footer>
+<script>
+  const modal = document.getElementById('modal');
+  const modalTitle = document.getElementById('modal-title');
+  const modalDescription = document.getElementById('modal-description');
+  const modalClose = document.getElementById('modal-close');
 
-  <script>
-    // Modal elements
-    const modal = document.getElementById('modal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalDescription = document.getElementById('modal-description');
-    const modalClose = document.getElementById('modal-close');
-
-    // Data for each key combo
-    const keyComboData = {
-      'open-launcher': {
-        title: 'Open Launcher',
-        description: 'Press the Master Key and F1 together to open the launcher. This will bring up the system launcher where you can search and open applications quickly.'
-      },
-      'close-window': {
-        title: 'Close Last Clicked Window',
-        description: 'Press the Master Key and F5 together to close the last window you clicked on..'
-      },
-      'launch-firefox': {
-        title: 'Launch Firefox',
-        description: 'Press the Master Key and F7 together to launch the Firefox browser. This shortcut quickly opens your default web browser.'
-      },
-      'open-terminal': {
-        title: 'Open Terminal',
-        description: 'Press the Master Key and F10 together to open the terminal. This shortcut opens a command line terminal for advanced system control.'
-      },
-      'master key': {
-        title: 'Master key',
-        description: 'ALT IS THE MASTER KEY'
-      }
-    };
-
-    // Function to open modal with content
-    function openModal(key) {
-      const data = keyComboData[key];
-      if (data) {
-        modalTitle.textContent = data.title;
-        modalDescription.textContent = data.description;
-        modal.style.display = 'block';
-      }
+  const keyComboData = {
+    'master key': {
+      title: 'Master Key Explanation',
+      description: 'Alt is the master key, chosen to differentiate the system from Windows defaults.'
+    },
+    'open-launcher': {
+      title: 'Launcher Explanation',
+      description: 'The launcher can be used to open any application that has a .desktop file on your system.'
+    },
+    'open-file-manager': {
+      title: 'File Manager Explanation',
+      description: 'Pcmanfm is a lightweight file manager designed for simplicity and speed.'
+    },
+    'open-guide': {
+      title: 'Guide Explanation',
+      description: 'This shortcut opens the usage guide to help you navigate the system.'
+    },
+    'close-window': {
+      title: 'Close Window',
+      description: 'Closes the last active window you clicked on.'
+    },
+    'launch-firefox': {
+      title: 'Firefox Explanation',
+      description: 'Firefox is a well-known and privacy-focused web browser.'
+    },
+    'open-terminal': {
+      title: 'Terminal Explanation',
+      description: 'Opens the terminal to execute commands in the system.'
+    },
+    'change-configuration': {
+      title: 'Change buttons config',
+      description: 'Opens an editor to change keys and commands.\nDo not use it unless you are sure of what you’re doing!\nAfter making changes, this guide may no longer work.'
     }
+  };
 
-    // Close modal on close button click
-    modalClose.onclick = function() {
-      modal.style.display = 'none';
-    };
+  function openModal(key) {
+    const data = keyComboData[key];
+    if (data) {
+      modalTitle.textContent = data.title;
+      modalDescription.textContent = data.description;
+      modal.classList.add('show');
+    }
+  }
 
-    // Close modal on outside click
-    window.onclick = function(event) {
-      if (event.target == modal) {
-        modal.style.display = 'none';
-      }
-    };
+  modalClose.onclick = () => modal.classList.remove('show');
+  window.onclick = (event) => { if (event.target == modal) modal.classList.remove('show'); };
 
-    // Add click listeners to key combo containers
-    document.querySelectorAll('.key-combo').forEach((element, index) => {
-      const keys = ['master key', 'open-launcher', 'close-window', 'launch-firefox', 'open-terminal'];
-      element.style.cursor = 'pointer';
-      element.addEventListener('click', () => openModal(keys[index]));
-    });
-  </script>
+  const keys = [
+    'master key',
+    'open-launcher',
+    'open-file-manager',
+    'open-guide',
+    'close-window',
+    'launch-firefox',
+    'open-terminal',
+    'change-configuration'
+  ];
 
-  <style>
-    /* Modal styles */
-    .modal {
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background-color: rgba(0,0,0,0.5);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      background-color: #fff;
-      padding: 20px 30px;
-      border-radius: 8px;
-      max-width: 400px;
-      width: 90%;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      position: relative;
-    }
-    .modal-close {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      font-size: 24px;
-      font-weight: bold;
-      color: #aaa;
-      cursor: pointer;
-      user-select: none;
-    }
-    .modal-close:hover {
-      color: #000;
-    }
-  </style>
+  document.querySelectorAll('.key-combo').forEach((element, index) => {
+    element.addEventListener('click', () => openModal(keys[index]));
+  });
+</script>
 </body>
 </html>
