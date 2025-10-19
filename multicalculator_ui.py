@@ -1,5 +1,6 @@
 import sys
 import time
+import os
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QLineEdit, QMessageBox, QComboBox, QSpinBox, QTabWidget, QGroupBox, QFormLayout
@@ -490,8 +491,13 @@ class MultiCalculatorApp(QWidget):
             self.label_toggle_theme.setStyleSheet("color: black; text-decoration: none; padding: 5px;")
 
     def back_to_home(self):
-        # Launch launcher.py and close current app
-        subprocess.Popen([sys.executable, "/home/endrx/Scrivania/codes/python/pyblauncher/newlauncher/launcher.py"])
+        # Ottieni il percorso della directory del file corrente
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # Costruisci il percorso completo a launcher.py
+        launcher_path = os.path.join(current_dir, "launcher.py")
+    
+        # Launch launcher.py e close current app
+        subprocess.Popen([sys.executable, launcher_path])
         self.close()
 
     def load_theme_config(self):
