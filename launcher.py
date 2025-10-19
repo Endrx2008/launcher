@@ -4,6 +4,7 @@ import sys
 import shlex
 import json
 import pathlib
+import datetime
 from functools import partial
 from PyQt5 import QtWidgets, QtGui, QtCore
 
@@ -53,10 +54,14 @@ class AppLauncher(QtWidgets.QMainWindow):
         self.category_page = QtWidgets.QWidget()
         self.category_layout = QtWidgets.QVBoxLayout(self.category_page)
 
-        # Barra icone di sistema
+        # Layout superiore con tutte le icone e l'orologio
+        self.top_layout = QtWidgets.QHBoxLayout()
+        self.top_layout.setSpacing(20)
+        self.top_layout.setContentsMargins(10, 10, 10, 10)
+
+        # Pulsanti di sistema a sinistra
         self.system_icons_layout = QtWidgets.QHBoxLayout()
-        self.system_icons_layout.setSpacing(20)
-        self.system_icons_layout.setAlignment(QtCore.Qt.AlignCenter)
+        self.system_icons_layout.setSpacing(15)
 
         self.system_icons_layout.addWidget(
             create_special_icon_label('system-shutdown', 'Shutdown', lambda: subprocess.Popen(['systemctl', 'poweroff']))
@@ -68,21 +73,27 @@ class AppLauncher(QtWidgets.QMainWindow):
             create_special_icon_label('system-suspend', 'Suspend', lambda: subprocess.Popen(['systemctl', 'suspend']))
         )
 
-        self.top_layout = QtWidgets.QHBoxLayout()
-        self.top_layout.setSpacing(10)
-        self.top_layout.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
-        self.top_layout.addLayout(self.system_icons_layout)
-        self.top_layout.addStretch(1)
-
-        self.category_title = QtWidgets.QLabel("Home")
+        # Orologio al centro
+        self.category_title = QtWidgets.QLabel()
         font = self.category_title.font()
         font.setPointSize(16)
         font.setBold(True)
         self.category_title.setFont(font)
         self.category_title.setAlignment(QtCore.Qt.AlignCenter)
-        self.top_layout.addWidget(self.category_title)
-        self.top_layout.addStretch(1)
 
+        # Timer per aggiornare l'ora
+        self.timer = QtCore.QTimer(self)
+        self.timer.timeout.connect(self.update_time)
+        self.timer.start(1000)
+        self.update_time()
+
+        # Aggiungi tutto al layout superiore
+        self.top_layout.addLayout(self.system_icons_layout)
+        self.top_layout.addStretch(1)  # Spazio espandibile a sinistra
+        self.top_layout.addWidget(self.category_title)
+        self.top_layout.addStretch(1)  # Spazio espandibile a destra
+
+        # Aggiungi il layout superiore al layout principale
         self.category_layout.addLayout(self.top_layout)
 
         self.preferred_apps_widget = QtWidgets.QListWidget()
@@ -164,6 +175,9 @@ class AppLauncher(QtWidgets.QMainWindow):
         self.category_list_widget.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.app_list_widget.setFocusPolicy(QtCore.Qt.StrongFocus)
 
+    def update_time(self):
+        now = datetime.datetime.now()
+        self.category_title.setText(now.strftime("%H:%M:%S"))
 
     def apply_dark_mode_style(self):
         if self.dark_mode:
@@ -382,7 +396,8 @@ class AppLauncher(QtWidgets.QMainWindow):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        self.toggle_button.move(self.width() - 40, 10)
+        # Posiziona il toggle button in alto a destra
+        self.toggle_button.move(self.width() - 50, 15)
 
     def plus_button_clicked(self, app, button):
         if app not in self.preferred_apps:
