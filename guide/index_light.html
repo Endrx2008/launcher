@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skorpion OS Guide</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'JetBrains Mono', 'JetBrainsMono Nerd Font', 'Fira Code', monospace;
+            background-color: #f6f4f1;
+            color: #1a1a1a;
+            margin: 0;
+            padding: 28px 20px;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        header {
+            max-width: 800px;
+            margin: 0 auto 28px auto;
+            padding: 0 4px 18px 4px;
+            border-bottom: 1px solid #d9d3cb;
+        }
+        h1 {
+            color: #c75200;
+            font-size: 2rem;
+            letter-spacing: 6px;
+            margin: 0;
+        }
+        header .subtitle {
+            color: #8a8580;
+            letter-spacing: 2px;
+            font-size: 0.8em;
+            text-align: right;
+            margin: 0;
+        }
+        header .intro {
+            color: #5e5a55;
+            margin: 14px 0 0 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .section-title {
+            margin: 10px 0 14px 0;
+            font-size: 0.9em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #e05c00;
+        }
+        .section-title.spaced { margin-top: 36px; }
+        details.other {
+            margin-top: 30px;
+            border-top: 1px solid #d9d3cb;
+            padding-top: 14px;
+        }
+        details.other summary {
+            cursor: pointer;
+            font-size: 0.9em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #e05c00;
+            padding: 6px 0 12px 0;
+            outline: none;
+            user-select: none;
+        }
+        details.other summary:hover { color: #c75200; }
+        details.other summary::marker { color: #c75200; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 0 14px;
+        }
+        .key-combo {
+            background-color: #ffffff;
+            border: 1px solid #d9d3cb;
+            border-left: 4px solid #c75200;
+            margin-bottom: 14px;
+            padding: 16px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            outline: none;
+        }
+        .key-combo.compact { padding: 13px 16px; margin-bottom: 12px; }
+        .key-combo:hover, .key-combo:focus {
+            background-color: #faf7f3;
+            border-color: #c75200;
+            transform: translateY(-1px);
+        }
+        .key-combo.master { border-left-color: #1a7f37; }
+        .key-combo.master h2 { color: #1a7f37; }
+        .key-combo.master .key { color: #1a7f37; border-color: #1a7f37; }
+        .key-combo h2 {
+            margin: 0;
+            font-size: 1.05em;
+            color: #1a1a1a;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+        .key {
+            display: inline-block;
+            background: #efebe6;
+            color: #e05c00;
+            border: 1px solid #c75200;
+            font-weight: bold;
+            padding: 3px 10px;
+            border-radius: 3px;
+            margin: 2px 4px 2px 0;
+            font-size: 0.9em;
+            letter-spacing: 1px;
+        }
+        .key-combo.compact .key { padding: 2px 8px; font-size: 0.82em; }
+        p {
+            margin: 10px 0 0 0;
+            color: #5e5a55;
+        }
+        .key-combo p.keys { color: #8a8580; }
+        .key-combo.compact p { margin-top: 7px; font-size: 0.92em; }
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 0.8em;
+            letter-spacing: 2px;
+            color: #8a8580;
+            padding-top: 18px;
+            border-top: 1px solid #d9d3cb;
+        }
+        [hidden] { display: none !important; }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            inset: 0;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.45);
+            display: flex;
+            visibility: hidden;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.2s ease, visibility 0.2s;
+        }
+        .modal.show { visibility: visible; opacity: 1; }
+        .modal-content {
+            background-color: #f6f4f1;
+            padding: 26px 30px;
+            border-radius: 6px;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            color: #1a1a1a;
+            border: 1px solid #c75200;
+            transform: scale(0.97);
+            transition: transform 0.2s ease;
+        }
+        .modal.show .modal-content { transform: scale(1); }
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 16px;
+            font-size: 24px;
+            color: #8a8580;
+            cursor: pointer;
+            user-select: none;
+        }
+        .modal-close:hover { color: #c75200; }
+        #modal-description { white-space: pre-line; line-height: 1.55; color: #5e5a55; }
+        #modal-command { color: #8a8580; font-size: 0.85em; word-break: break-all; }
+        #modal-title {
+            color: #c75200;
+            letter-spacing: 1px;
+            margin: 0 0 14px 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #d9d3cb;
+            font-size: 1.15em;
+        }
+        .shortcut-info {
+            text-align: center;
+            margin-top: 24px;
+            padding: 14px;
+            background: #ffffff;
+            border-radius: 6px;
+            font-size: 0.9em;
+            color: #5e5a55;
+            border: 1px dashed #d9d3cb;
+        }
+        .shortcut-info p { margin: 4px 0; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>SKORPION OS</h1>
+        <p class="subtitle">MASTER KEY SYSTEM  ·  USAGE GUIDE</p>
+        <p class="intro">Learn how to use Skorpion OS<span id="desktop-name"></span>, with the function keys to control your system. Click a card to read more.</p>
+    </header>
+
+    <div class="container">
+        <h3 class="section-title">Function keys</h3>
+        <div class="key-combo master" data-action="master" data-card="fn-master" tabindex="0">
+            <h2>Master Key</h2>
+            <p class="keys"><span class="key">Alt</span></p>
+            <p>ALT IS THE MASTER KEY</p>
+        </div>
+
+        <div class="key-combo" data-action="launcher" data-card="fn-launcher" tabindex="0">
+            <h2>Open Launcher</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">F1</span></p>
+            <p>Press the Master Key and F1 together to open the launcher. Press them again to close it.</p>
+        </div>
+
+        <div class="key-combo" data-action="file_manager" data-card="fn-file_manager" tabindex="0">
+            <h2>Open the File Manager</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">F2</span></p>
+            <p>Press the Master Key and F2 together to open the file manager.</p>
+        </div>
+
+        <div class="key-combo" data-action="guide" data-card="fn-guide" tabindex="0">
+            <h2>Open Guide</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">F3</span></p>
+            <p>Press the Master Key and F3 together to open this guide.</p>
+        </div>
+
+        <div class="key-combo" data-action="close" data-card="fn-close" tabindex="0">
+            <h2>Close Window</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">F5</span></p>
+            <p>Press the Master Key and F5 together to close the active window.</p>
+        </div>
+
+        <div class="key-combo" data-action="browser" data-card="fn-browser" tabindex="0">
+            <h2>Launch the Web Browser</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">F7</span></p>
+            <p>Press the Master Key and F7 together to launch Firefox.</p>
+        </div>
+
+        <div class="key-combo" data-action="terminal" data-card="fn-terminal" tabindex="0">
+            <h2>Open Terminal</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">F10</span></p>
+            <p>Press the Master Key and F10 together to open the terminal.</p>
+        </div>
+
+        <div class="key-combo" data-action="config" data-card="fn-config" tabindex="0">
+            <h2>Change Configuration</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">F11</span></p>
+            <p>Press the Master Key and F11 together to change this configuration.</p>
+        </div>
+
+        <details class="other">
+            <summary id="other-title">Other shortcuts</summary>
+            <div class="grid">
+        <div class="key-combo compact" data-env="hyprland i3" data-card="win-0" tabindex="0">
+            <h2>Terminal</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">Enter</span></p>
+            <p>Another way to open a terminal.</p>
+        </div>
+        <div class="key-combo compact" data-env="hyprland" data-card="win-1" tabindex="0">
+            <h2>Close Window</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">Shift</span> + <span class="key">Q</span></p>
+            <p>Another way to close the active window.</p>
+        </div>
+        <div class="key-combo compact" data-action="app_menu" data-env="hyprland" data-card="win-2" tabindex="0">
+            <h2>App Menu</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">D</span></p>
+            <p>Quick menu to run any program by name.</p>
+        </div>
+        <div class="key-combo compact" data-env="hyprland i3" data-card="win-3" tabindex="0">
+            <h2>Move Focus</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">J / K / L / Ò</span></p>
+            <p>Or Alt + the arrow keys.</p>
+        </div>
+        <div class="key-combo compact" data-env="hyprland i3" data-card="win-4" tabindex="0">
+            <h2>Move Window</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">Shift</span> + <span class="key">J / K / L / Ò</span></p>
+            <p>Or Alt + Shift + the arrow keys.</p>
+        </div>
+        <div class="key-combo compact" data-env="hyprland i3" data-card="win-5" tabindex="0">
+            <h2>Workspaces</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">1 … 0</span></p>
+            <p>Switch between 10 desktops.</p>
+        </div>
+        <div class="key-combo compact" data-action="fullscreen" data-env="hyprland i3" data-card="win-6" tabindex="0">
+            <h2>Fullscreen</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">F</span></p>
+            <p>Fullscreen on/off for the active window.</p>
+        </div>
+        <div class="key-combo compact" data-action="floating" data-env="hyprland i3" data-card="win-7" tabindex="0">
+            <h2>Floating Window</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">Shift</span> + <span class="key">Space</span></p>
+            <p>Detach a window from the grid.</p>
+        </div>
+        <div class="key-combo compact" data-action="tabs" data-env="hyprland" data-card="win-8" tabindex="0">
+            <h2>Tabs</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">W</span></p>
+            <p>Group windows as tabs.</p>
+        </div>
+        <div class="key-combo compact" data-action="split_h" data-env="hyprland" data-card="win-9" tabindex="0">
+            <h2>Next Window Right</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">H</span></p>
+            <p>The next window opens on the right.</p>
+        </div>
+        <div class="key-combo compact" data-action="split_v" data-env="hyprland" data-card="win-10" tabindex="0">
+            <h2>Next Window Below</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">V</span></p>
+            <p>The next window opens below.</p>
+        </div>
+        <div class="key-combo compact" data-action="toggle_split" data-env="hyprland i3" data-card="win-11" tabindex="0">
+            <h2>Toggle Split</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">E</span></p>
+            <p>Side by side ↔ stacked.</p>
+        </div>
+        <div class="key-combo compact" data-action="resize" data-env="hyprland i3" data-card="win-12" tabindex="0">
+            <h2>Resize Mode</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">R</span></p>
+            <p>Resize the active window with the keyboard.</p>
+        </div>
+        <div class="key-combo compact" data-action="reload" data-env="hyprland i3" data-card="win-13" tabindex="0">
+            <h2>Reload Configuration</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">Shift</span> + <span class="key">C</span></p>
+            <p>Apply changes to the configuration.</p>
+        </div>
+        <div class="key-combo compact" data-action="exit" data-env="hyprland i3" data-card="win-14" tabindex="0">
+            <h2>Log Out</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">Shift</span> + <span class="key">E</span></p>
+            <p>End the session.</p>
+        </div>
+        <div class="key-combo compact" data-env="hyprland" data-card="win-15" tabindex="0">
+            <h2>Touchpad Swipe</h2>
+            <p class="keys"><span class="key">3 fingers ← →</span></p>
+            <p>Switch workspace on a laptop.</p>
+        </div>
+        <div class="key-combo compact" data-action="app_menu" data-env="i3" data-card="win-16" tabindex="0">
+            <h2>App Menu</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">D</span></p>
+            <p>Quick menu to run any program by name.</p>
+        </div>
+        <div class="key-combo compact" data-action="split_h" data-env="i3" data-card="win-17" tabindex="0">
+            <h2>Split Horizontally</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">H</span></p>
+            <p>The next window opens on the right.</p>
+        </div>
+        <div class="key-combo compact" data-action="split_v" data-env="i3" data-card="win-18" tabindex="0">
+            <h2>Split Vertically</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">V</span></p>
+            <p>The next window opens below.</p>
+        </div>
+        <div class="key-combo compact" data-action="tabs" data-env="i3" data-card="win-19" tabindex="0">
+            <h2>Tabbed Layout</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">W</span></p>
+            <p>Windows as tabs.</p>
+        </div>
+        <div class="key-combo compact" data-action="stacking" data-env="i3" data-card="win-20" tabindex="0">
+            <h2>Stacked Layout</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">S</span></p>
+            <p>Windows as a stacked list.</p>
+        </div>
+        <div class="key-combo compact" data-action="focus_mode" data-env="i3" data-card="win-21" tabindex="0">
+            <h2>Tiled ↔ Floating Focus</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">Space</span></p>
+            <p>Jump between tiled and floating windows.</p>
+        </div>
+        <div class="key-combo compact" data-action="focus_parent" data-env="i3" data-card="win-22" tabindex="0">
+            <h2>Focus Parent</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">A</span></p>
+            <p>Select the whole container.</p>
+        </div>
+        <div class="key-combo compact" data-action="restart" data-env="i3" data-card="win-23" tabindex="0">
+            <h2>Restart i3</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">Shift</span> + <span class="key">R</span></p>
+            <p>Restart i3 keeping your windows.</p>
+        </div>
+        <div class="key-combo compact" data-action="skai_manager" data-env="hyprland i3" data-card="win-24" tabindex="0">
+            <h2>SKAI Manager</h2>
+            <p class="keys"><span class="key">Alt</span> + <span class="key">F9</span></p>
+            <p>Manage the local AI: models, on / off, remote PC.</p>
+        </div>
+            </div>
+        </details>
+
+        <!-- Modal -->
+        <div id="modal" class="modal" role="dialog" aria-modal="true">
+            <div class="modal-content">
+                <span id="modal-close" class="modal-close" title="Close (Esc)">&times;</span>
+                <h2 id="modal-title"></h2>
+                <p id="modal-description"></p>
+                <p id="modal-command"></p>
+            </div>
+        </div>
+
+        <div class="shortcut-info">
+            <p id="close-hint">To close this guide press <span class="key">Alt</span> + <span class="key">F5</span></p>
+            <p id="open-hint">To open it again press <span class="key">Alt</span> + <span class="key">F3</span></p>
+        </div>
+
+        <footer>SKORPION OS  ·  USAGE GUIDE</footer>
+    </div>
+
+    <script>
+        const cardData = {
+            "fn-master": {
+                        "title": "Master Key",
+                        "description": "Alt is the master key, chosen to stay clear of the Windows-style shortcuts. The Skorpion shortcuts are combinations of the Alt key with the function keys F1 … F11."
+            },
+            "fn-launcher": {
+                        "title": "Launcher",
+                        "description": "The launcher opens any application installed on your system.\n\n• Just start typing to search, Enter opens the first result.\n• Open a category and press + next to an app to add it to your favorites.\n• Esc goes back; on the home page it closes the launcher.\n• Ctrl+C opens the multicalculator, Ctrl+T switches between the light and dark theme, Ctrl+I lists all the launcher shortcuts.\n• The buttons at the top left shut down, restart, sleep, lock or log out.\n\nIf the local AI (Ollama) is installed, the panel on the right is an assistant that can also open apps for you (\"open firefox\")."
+            },
+            "fn-file_manager": {
+                        "title": "File Manager",
+                        "description": "Opens the file manager, to browse and manage your files and folders."
+            },
+            "fn-guide": {
+                        "title": "Guide",
+                        "description": "Opens this usage guide. It lists the shortcuts of the desktop you are using, read from its configuration, so it stays correct if you change them.\n\nThe guide follows the launcher theme: switch it with Ctrl+T in the launcher."
+            },
+            "fn-close": {
+                        "title": "Close Window",
+                        "description": "Closes the active window.",
+                        "hyprland": "Closes the active window. Focus follows the mouse, so the active window is the one under the mouse pointer (it has the sky blue border).",
+                        "i3": "Closes the active window. Focus follows the mouse, so the active window is the one under the mouse pointer (it has the sky blue border)."
+            },
+            "fn-browser": {
+                        "title": "Web Browser",
+                        "description": "Opens Firefox, a well-known, privacy-focused web browser."
+            },
+            "fn-terminal": {
+                        "title": "Terminal",
+                        "description": "Opens the terminal, to type commands. Useful for advanced users.",
+                        "hyprland": "Opens the kitty terminal, to type commands. Useful for advanced users.",
+                        "i3": "Opens the kitty terminal, to type commands. Useful for advanced users."
+            },
+            "fn-config": {
+                        "title": "Change Configuration",
+                        "description": "Opens the configuration file that defines these keys in the nano editor.\n\n⚠️ Do not use it unless you are sure of what you're doing!",
+                        "hyprland": "Opens the Hyprland configuration (~/.config/hypr/hyprland.lua) in the nano editor, to change keys and commands. Save with Ctrl+O and exit with Ctrl+X: Hyprland applies the changes as soon as the file is saved.\n\n⚠️ Do not use it unless you are sure of what you're doing!",
+                        "i3": "Opens the i3 configuration (~/.config/i3/config) in the nano editor, to change keys and commands. Save with Ctrl+O, exit with Ctrl+X, then press Alt + Shift + C to load the changes.\n\n⚠️ Do not use it unless you are sure of what you're doing!"
+            },
+            "win-0": {
+                        "title": "Terminal",
+                        "description": "Opens a terminal, like Alt + F10."
+            },
+            "win-1": {
+                        "title": "Close Window",
+                        "description": "Closes the active window, like Alt + F5."
+            },
+            "win-2": {
+                        "title": "App Menu",
+                        "description": "Opens fuzzel, a small search menu: type part of a program name and press Enter. Esc closes it."
+            },
+            "win-3": {
+                        "title": "Move Focus",
+                        "description": "Moves the focus to the window on the left (J), below (K), above (L) or on the right (Ò, the key right of L). The arrow keys work the same way."
+            },
+            "win-4": {
+                        "title": "Move Window",
+                        "description": "Moves the active window left, down, up or right."
+            },
+            "win-5": {
+                        "title": "Workspaces",
+                        "description": "Alt + 1 … Alt + 0 switch to workspace 1 … 10.\nAlt + Shift + 1 … 0 send the active window to that workspace."
+            },
+            "win-6": {
+                        "title": "Fullscreen",
+                        "description": "Puts the active window in fullscreen; press again to go back."
+            },
+            "win-7": {
+                        "title": "Floating Window",
+                        "description": "Switches the active window between tiled (part of the grid) and floating (free, on top of the others).\n\nAlt + left mouse button drags a floating window; Alt + right mouse button resizes it."
+            },
+            "win-8": {
+                        "title": "Tabs (window groups)",
+                        "description": "Turns the active window into a group: windows opened or moved next to it become tabs of the same group, shown with a bar on top. Alt + J / Ò (or the arrows) move between the tabs. Press Alt + W again to ungroup."
+            },
+            "win-9": {
+                        "title": "Split Direction",
+                        "description": "Alt + H: the next window opens on the right of the active one.\nAlt + V: the next window opens below it."
+            },
+            "win-10": {
+                        "title": "Split Direction",
+                        "description": "Alt + V: the next window opens below the active one.\nAlt + H: the next window opens on its right."
+            },
+            "win-11": {
+                        "title": "Toggle Split",
+                        "description": "Switches the active window and its neighbour between side by side and one above the other."
+            },
+            "win-12": {
+                        "title": "Resize Mode",
+                        "description": "Enters resize mode: J / Ò (or ← / →) make the window narrower / wider, L / K (or ↑ / ↓) make it shorter / taller.\n\nEnter, Esc or Alt + R go back to normal."
+            },
+            "win-13": {
+                        "title": "Reload Configuration",
+                        "description": "Reloads the configuration file, so changes made with Alt + F11 take effect."
+            },
+            "win-14": {
+                        "title": "Log Out",
+                        "description": "Ends the session and goes back to the login screen: save your work first!\n\nShut down and restart are in the launcher (Alt + F1), top left."
+            },
+            "win-15": {
+                        "title": "Touchpad Swipe",
+                        "description": "On a laptop touchpad, a horizontal swipe with three fingers switches workspace."
+            },
+            "win-16": {
+                        "title": "App Menu",
+                        "description": "Opens dmenu, a bar at the top of the screen: type part of a program name and press Enter. Esc closes it."
+            },
+            "win-17": {
+                        "title": "Split Horizontally",
+                        "description": "The next window opens next to the active one (side by side)."
+            },
+            "win-18": {
+                        "title": "Split Vertically",
+                        "description": "The next window opens below the active one."
+            },
+            "win-19": {
+                        "title": "Tabbed Layout",
+                        "description": "Shows the windows of the current container as tabs, one at a time. Alt + E goes back to the split layout."
+            },
+            "win-20": {
+                        "title": "Stacked Layout",
+                        "description": "Shows the windows of the current container stacked, with their titles listed on top. Alt + E goes back to the split layout."
+            },
+            "win-21": {
+                        "title": "Focus Mode",
+                        "description": "Moves the focus between the tiled windows and the floating ones."
+            },
+            "win-22": {
+                        "title": "Focus Parent",
+                        "description": "Moves the focus to the container that holds the active window, so the next command (move, fullscreen …) acts on the whole group."
+            },
+            "win-23": {
+                        "title": "Restart i3",
+                        "description": "Restarts i3 in place: your windows stay open. Useful after big changes to the configuration."
+            },
+            "win-24": {
+                        "title": "SKAI Manager",
+                        "description": "Manages the local AI of Skorpion OS (available once the SKAI setup wizard is done).\n\n• Models: download a model (the Qwen 2.5 family or any model of the Ollama library, searched by name) or remove one. Every Skorpion app always uses the biggest installed model, so one model at a time is enough.\n• On / Off: turn the local Ollama off to free memory, and on again.\n• Remote PC: use the Ollama of another computer of your network instead of this one (for experienced users).\n\nPress the same keys again to close it."
+            }
+        };
+        const desktopNames = { hyprland: "Hyprland", i3: "i3" };
+
+        // visualizer.py passes the desktop and its live key bindings in the URL fragment
+        const params = new URLSearchParams(location.hash.slice(1));
+        let env = params.get('env');
+        if (!(env in desktopNames)) env = 'hyprland';
+        let live = null;
+        try { live = JSON.parse(params.get('keys')); } catch (e) { live = null; }
+
+        document.getElementById('desktop-name').textContent =
+            params.get('env') ? ' on ' + desktopNames[env] : '';
+        // i3's own default config has these keys; Hyprland's default config does not
+        document.getElementById('other-title').textContent =
+            env === 'i3' ? 'Other shortcuts (default for i3)' : 'Other shortcuts';
+
+        function keyHtml(keys) {
+            return keys.map(k => {
+                const span = document.createElement('span');
+                span.className = 'key';
+                span.textContent = k;
+                return span.outerHTML;
+            }).join(' + ');
+        }
+
+        document.querySelectorAll('[data-env]').forEach(el => {
+            el.hidden = !el.dataset.env.split(' ').includes(env);
+        });
+
+        if (live) {
+            document.querySelectorAll('.key-combo[data-action]').forEach(el => {
+                const binding = live[el.dataset.action];
+                if (!binding) {
+                    el.hidden = true;  // not bound on this system
+                    return;
+                }
+                const combos = [binding.keys].concat(binding.alt || []);
+                el.querySelector('p.keys').innerHTML = combos.map(keyHtml).join(' / ');
+                // the sentence names the function key: use the one really bound
+                const text = el.querySelector('p:not(.keys)');
+                const last = binding.keys[binding.keys.length - 1];
+                if (text && /^F\d+$/.test(last)) {
+                    text.textContent = text.textContent.replace(/\bF\d+\b/, last);
+                }
+            });
+            for (const [id, action] of [['close-hint', 'close'], ['open-hint', 'guide']]) {
+                const hint = document.getElementById(id);
+                if (live[action]) {
+                    hint.innerHTML = hint.innerHTML.replace(/<span class="key">.*<\/span>/,
+                                                            keyHtml(live[action].keys));
+                } else {
+                    hint.hidden = true;
+                }
+            }
+        }
+
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDescription = document.getElementById('modal-description');
+        const modalCommand = document.getElementById('modal-command');
+
+        function openModal(element) {
+            const data = cardData[element.dataset.card];
+            if (!data) return;
+            modalTitle.textContent = data.title;
+            modalDescription.textContent = data[env] || data.description;
+            const binding = live && element.dataset.action ? live[element.dataset.action] : null;
+            const cmd = binding && binding.cmd ? binding.cmd.replace(/\/home\/[^/ ]+/g, '~') : '';
+            modalCommand.textContent = cmd ? 'Runs: ' + cmd : '';
+            modalCommand.hidden = !cmd;
+            modal.classList.add('show');
+        }
+
+        function closeModal() {
+            modal.classList.remove('show');
+        }
+
+        document.getElementById('modal-close').onclick = closeModal;
+        window.onclick = (event) => {
+            if (event.target == modal) closeModal();
+        };
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeModal();
+        });
+
+        document.querySelectorAll('.key-combo').forEach((element) => {
+            element.addEventListener('click', () => openModal(element));
+            element.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openModal(element);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

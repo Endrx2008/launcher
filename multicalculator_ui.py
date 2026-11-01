@@ -1,14 +1,85 @@
+# Copyright (C) 2026 Enrico Miot
+# Licensed under GNU GPL v3 or later — see /usr/share/common-licenses/GPL-3
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 import sys
-import time
 import os
-from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-    QLineEdit, QMessageBox, QComboBox, QSpinBox, QTabWidget, QGroupBox, QFormLayout
-)
+import re
 import subprocess
-from PyQt5.QtCore import QTimer, Qt
-from PyQt5.QtWidgets import QGridLayout
-from PyQt5.QtGui import QDoubleValidator
+from string import Template
+
+from PySide6.QtWidgets import (
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
+    QLineEdit, QMessageBox, QSpinBox, QTabWidget, QGroupBox, QFormLayout,
+    QGridLayout, QProgressBar, QSizePolicy
+)
+from PySide6.QtCore import QTimer, Qt, QLocale
+from PySide6.QtGui import QDoubleValidator, QGuiApplication
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # skcommon, safe_math
+from safe_math import safe_eval
+
+import skcommon
+from skcommon import PALETTES, FONT
+
+# Wayland app_id: ~/.config/hypr/hyprland.lua matches it to float and center the window
+APP_ID = "skorpion-calculator"
+
+STYLESHEET = Template("""
+QWidget { background-color: $bg; color: $text; font-family: $font; }
+QLabel { background: transparent; }
+QLabel#dim { color: $dim; }
+QLabel#big { color: $accent; font-size: 34px; font-weight: bold; letter-spacing: 2px; }
+QLineEdit {
+    background-color: $bg2; color: $text; border: 1px solid $border;
+    padding: 6px 10px; border-radius: 4px;
+}
+QLineEdit:focus { border: 1px solid $accent; }
+QLineEdit#display {
+    background-color: $bg2; color: $text; font-size: 28px; padding: 6px 12px;
+}
+QPushButton {
+    background-color: $bg2; color: $text; border: 1px solid $border;
+    padding: 5px; border-radius: 4px;
+}
+QPushButton:hover { border-color: $accent; }
+QPushButton:pressed { background-color: $accent; color: $on_accent; }
+QPushButton#digit { font-size: 18px; }
+QPushButton#op { background-color: $bg3; color: $accent2; font-size: 18px; }
+QPushButton#mem { background-color: transparent; font-size: 13px; color: $muted; }
+QPushButton#secondary { background-color: transparent; color: $muted; letter-spacing: 1px; }
+QPushButton#secondary:hover { color: $text; }
+QPushButton#equals, QPushButton#primary {
+    background-color: $accent; color: $on_accent; border: none; font-size: 18px; font-weight: bold;
+}
+QPushButton#equals:hover, QPushButton#primary:hover { background-color: $accent2; }
+QGroupBox { border: 1px solid $border; border-radius: 6px; margin-top: 14px; padding: 10px; }
+QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: $accent2; }
+QTabWidget::pane { border: 1px solid $border; border-radius: 6px; top: -1px; }
+QTabBar::tab {
+    background: transparent; color: $dim; padding: 7px 14px; letter-spacing: 1px;
+    border: 1px solid transparent; border-bottom: none; margin-right: 2px;
+}
+QTabBar::tab:selected { color: $accent; border-color: $border; border-top: 2px solid $accent; background: $bg; }
+QTabBar::tab:hover { color: $text; }
+QProgressBar {
+    background-color: $bg2; border: 1px solid $border; border-radius: 3px; height: 8px;
+}
+QProgressBar::chunk { background-color: $accent; border-radius: 3px; }
+QMessageBox { background-color: $bg; }
+""")
+
+
+
+def format_number(value):
+    """2.0 -> "2", 0.1+0.2 -> "0.3", big/small values in exponent form."""
+    if isinstance(value, float):
+        if value != value or value in (float("inf"), float("-inf")):
+            raise ValueError("Invalid result")
+        if value.is_integer() and abs(value) < 1e15:
+            return str(int(value))
+        return f"{value:.12g}"
+    return str(value)
 
 
 class Calculator(QWidget):
@@ -17,17 +88,24 @@ class Calculator(QWidget):
         layout = QVBoxLayout()
 
         self.display = QLineEdit()
+        self.display.setObjectName("display")
         self.display.setReadOnly(True)
-        self.display.setFixedHeight(50)
-        self.display.setStyleSheet("font-size: 24px; padding: 5px;")
+        self.display.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.display.setFixedHeight(56)
+        self.display.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self.display)
+
+        self.result_label = QLabel("")
+        self.result_label.setObjectName("dim")
+        self.result_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.result_label.setStyleSheet("font-size: 14px; padding: 0 5px;")
 
         buttons_widget = QWidget()
         grid = QGridLayout(buttons_widget)
-        spacing = 5
+        spacing = 6
         grid.setSpacing(spacing)
         grid.setContentsMargins(0, 0, 0, 0)
-        
+
         # Windows calculator standard layout buttons
         buttons = {
             'MC': (0, 0),
@@ -67,154 +145,151 @@ class Calculator(QWidget):
 
         for btn_text, pos in buttons.items():
             button = QPushButton(btn_text)
-            # Remove fixed sizes to allow resizing and locking in place
-            # Instead, set minimum size and size policy
-            if btn_text == '0':
-                button.setMinimumSize(110, 50)
-            elif btn_text == '=':
-                button.setMinimumSize(50, 100 + spacing)
+            button.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # keys always reach the calculator
+            button.setMinimumSize(50, 46)
+            button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            if btn_text == '=':
+                button.setObjectName("equals")
+            elif btn_text in ('MC', 'MR', 'MS', 'M+', 'M-'):
+                button.setObjectName("mem")
+            elif btn_text.isdigit() or btn_text == '.':
+                button.setObjectName("digit")
             else:
-                button.setMinimumSize(50, 50)
-            button.setSizePolicy(button.sizePolicy().horizontalPolicy(), button.sizePolicy().verticalPolicy())
-            button.setStyleSheet("font-size: 18px;")
+                button.setObjectName("op")
             button.clicked.connect(self.on_button_clicked)
             if len(pos) == 2:
                 grid.addWidget(button, pos[0], pos[1])
             else:
                 grid.addWidget(button, pos[0], pos[1], pos[2], pos[3])
 
-        layout.addWidget(buttons_widget)
-
-        self.result_label = QLabel("")
-        self.result_label.setStyleSheet("font-size: 16px; padding: 5px;")
         layout.addWidget(self.result_label)
+        layout.addWidget(buttons_widget, 1)
+
+        self.memory_label = QLabel("")
+        self.memory_label.setObjectName("dim")
+        layout.addWidget(self.memory_label)
 
         self.setLayout(layout)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self.current_expression = ""
         self.memory = 0.0
 
-    def on_button_clicked(self):
-        sender = self.sender()
-        text = sender.text()
+    def _show(self):
+        self.display.setText(self.current_expression)
 
+    def _update_memory_label(self):
+        self.memory_label.setText(f"M = {format_number(self.memory)}" if self.memory else "")
+
+    def _reset_after_error(self, message="Invalid expression"):
+        QMessageBox.warning(self, "Error", message)
+        self.current_expression = ""
+        self._show()
+        self.result_label.setText("")
+
+    def _value(self):
+        """Value of the whole expression on the display (e.g. 50+10 -> 60)."""
+        return safe_eval(self.current_expression)
+
+    def _compute_and_show(self, value, shown_expression=None):
+        result = format_number(value)
+        self.result_label.setText(f"{shown_expression or self.current_expression} =")
+        self.current_expression = result
+        self._show()
+
+    def _safe(self, func):
+        try:
+            func()
+        except ZeroDivisionError:
+            self._reset_after_error("Cannot divide by zero")
+        except Exception:
+            self._reset_after_error()
+
+    def on_button_clicked(self):
+        self.handle(self.sender().text())
+
+    def handle(self, text):
         if text == 'MC':
             self.memory = 0.0
+            self._update_memory_label()
         elif text == 'MR':
-            self.current_expression = str(self.memory)
-            self.display.setText(self.current_expression)
+            self.current_expression += format_number(self.memory)
+            self._show()
         elif text == 'MS':
-            try:
-                self.memory = float(self.current_expression)
-            except ValueError:
-                QMessageBox.warning(self, "Errore", "Espressione non valida")
+            def store():
+                self.memory = float(self._value())
+                self._update_memory_label()
+            self._safe(store)
         elif text == 'M+':
-            try:
-                self.memory += float(self.current_expression)
-            except ValueError:
-                QMessageBox.warning(self, "Errore", "Espressione non valida")
+            def add():
+                self.memory += float(self._value())
+                self._update_memory_label()
+            self._safe(add)
         elif text == 'M-':
-            try:
-                self.memory -= float(self.current_expression)
-            except ValueError:
-                QMessageBox.warning(self, "Errore", "Espressione non valida")
+            def sub():
+                self.memory -= float(self._value())
+                self._update_memory_label()
+            self._safe(sub)
         elif text == 'C':
             self.current_expression = ""
-            self.display.setText(self.current_expression)
+            self._show()
             self.result_label.setText("")
         elif text == 'CE':
-            import re
             new_expr = re.sub(r'(\d+\.?\d*|\.\d+)$', '', self.current_expression)
             if new_expr == self.current_expression:
                 new_expr = ""
             self.current_expression = new_expr
-            self.display.setText(self.current_expression)
+            self._show()
         elif text == '←':
             self.current_expression = self.current_expression[:-1]
-            self.display.setText(self.current_expression)
+            self._show()
         elif text == '±':
             if self.current_expression.startswith('-'):
                 self.current_expression = self.current_expression[1:]
             elif self.current_expression:
                 self.current_expression = '-' + self.current_expression
-            self.display.setText(self.current_expression)
+            self._show()
         elif text == '=':
-            try:
-                # Evaluate the expression safely
-                result = eval(self.current_expression, {"__builtins__": None}, {})
-                self.result_label.setText(f"Risultato: {result}")
-                self.current_expression = str(result)
-                self.display.setText(self.current_expression)
-            except Exception:
-                QMessageBox.warning(self, "Errore", "Espressione non valida")
-                self.current_expression = ""
-                self.display.setText(self.current_expression)
-                self.result_label.setText("")
+            self._safe(lambda: self._compute_and_show(self._value()))
         elif text == '√':
-            try:
-                result = str(eval(self.current_expression, {"__builtins__": None}, {}) ** 0.5)
-                self.result_label.setText(f"Risultato: {result}")
-                self.current_expression = result
-                self.display.setText(self.current_expression)
-            except Exception:
-                QMessageBox.warning(self, "Errore", "Espressione non valida")
-                self.current_expression = ""
-                self.display.setText(self.current_expression)
-                self.result_label.setText("")
+            def root():
+                value = self._value()
+                if value < 0:
+                    raise ValueError("Square root of a negative number")
+                self._compute_and_show(value ** 0.5, f"√({self.current_expression})")
+            self._safe(root)
         elif text == '1/x':
-            try:
-                result = str(1 / float(self.current_expression))
-                self.result_label.setText(f"Risultato: {result}")
-                self.current_expression = result
-                self.display.setText(self.current_expression)
-            except Exception:
-                QMessageBox.warning(self, "Errore", "Espressione non valida")
-                self.current_expression = ""
-                self.display.setText(self.current_expression)
-                self.result_label.setText("")
+            self._safe(lambda: self._compute_and_show(
+                1 / self._value(), f"1/({self.current_expression})"))
         elif text == '%':
-            try:
-                result = str(float(self.current_expression) / 100)
-                self.result_label.setText(f"Risultato: {result}")
-                self.current_expression = result
-                self.display.setText(self.current_expression)
-                self.result_label.setText("")
-            except Exception:
-                QMessageBox.warning(self, "Errore", "Espressione non valida")
-                self.current_expression = ""
-                self.display.setText(self.current_expression)
-                self.result_label.setText("")
+            self._safe(lambda: self._compute_and_show(
+                self._value() / 100, f"({self.current_expression})%"))
         else:
             self.current_expression += text
-            self.display.setText(self.current_expression)
+            self._show()
 
     def keyPressEvent(self, event):
         key = event.key()
         text = event.text()
-        if key in (Qt.Key_Enter, Qt.Key_Return):
-            self.on_button_clicked_enter()
-        elif key == Qt.Key_Backspace:
-            self.current_expression = self.current_expression[:-1]
-            self.display.setText(self.current_expression)
-        elif text in '0123456789.+-*/%()':
-            self.current_expression += text
-            self.display.setText(self.current_expression)
-        elif key == Qt.Key_Escape:
-            self.current_expression = ""
-            self.display.setText(self.current_expression)
-            self.result_label.setText("")
-
-    def on_button_clicked_enter(self):
-        try:
-            result = eval(self.current_expression, {"__builtins__": None}, {})
-            self.result_label.setText(f"Risultato: {result}")
-            self.current_expression = str(result)
-            self.display.setText(self.current_expression)
-        except Exception:
-            QMessageBox.warning(self, "Errore", "Espressione non valida")
-            self.current_expression = ""
-            self.display.setText(self.current_expression)
-            self.result_label.setText("")
+        if key in (Qt.Key.Key_Enter, Qt.Key.Key_Return) or text == '=':
+            self.handle('=')
+        elif key == Qt.Key.Key_Backspace:
+            self.handle('←')
+        elif key == Qt.Key.Key_Delete:
+            self.handle('C')
+        elif text == ',':
+            self.handle('.')  # keypads with a decimal comma
+        elif text and text in '0123456789.+-*/()':
+            self.handle(text)
+        elif text == '%':
+            self.handle('%')
+        elif key == Qt.Key.Key_Escape:
+            if self.current_expression:
+                self.handle('C')
+            else:
+                event.ignore()  # empty: let the window go back to the launcher
+        else:
+            super().keyPressEvent(event)
 
 
 class PercentualCalculator(QWidget):
@@ -222,47 +297,68 @@ class PercentualCalculator(QWidget):
         super().__init__()
         layout = QVBoxLayout()
 
-        group = QGroupBox("Calcolatore Percentuale")
+        group = QGroupBox("Percentage")
         form_layout = QFormLayout()
 
+        validator = QDoubleValidator(0.0, 1000000000.0, 6)
+        validator.setLocale(QLocale.c())  # always accept "12.5"
+
         self.x_input = QLineEdit()
-        self.x_input.setPlaceholderText("Inserisci valore percentuale")
-        self.x_input.setValidator(QDoubleValidator(0.0, 1000000.0, 6))
-        form_layout.addRow("Percentuale (%):", self.x_input)
+        self.x_input.setPlaceholderText("Percentage, e.g. 20")
+        self.x_input.setValidator(validator)
+        self.x_input.textChanged.connect(self.calculate_live)
+        form_layout.addRow("Percent (%):", self.x_input)
 
         self.y_input = QLineEdit()
-        self.y_input.setPlaceholderText("Inserisci il valore base")
-        self.y_input.setValidator(QDoubleValidator(0.0, 1000000.0, 6))
-        form_layout.addRow("Del valore:", self.y_input)
+        self.y_input.setPlaceholderText("Value, e.g. 150")
+        self.y_input.setValidator(validator)
+        self.y_input.textChanged.connect(self.calculate_live)
+        form_layout.addRow("Of:", self.y_input)
 
         group.setLayout(form_layout)
         layout.addWidget(group)
 
         self.result_label = QLabel("")
-        layout.addWidget(self.result_label)
+        self.result_label.setObjectName("big")
+        self.result_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.result_label.setWordWrap(True)
+        layout.addWidget(self.result_label, 1)
 
-        btn_calc = QPushButton("Calcola")
+        btn_calc = QPushButton("Calculate")
+        btn_calc.setObjectName("primary")
+        btn_calc.setMinimumHeight(36)
         btn_calc.clicked.connect(self.calculate)
         layout.addWidget(btn_calc)
 
         self.setLayout(layout)
 
     def keyPressEvent(self, event):
-        key = event.key()
-        if key in (Qt.Key_Enter, Qt.Key_Return):
+        if event.key() in (Qt.Key.Key_Enter, Qt.Key.Key_Return):
             self.calculate()
+        else:
+            super().keyPressEvent(event)
+
+    def _numbers(self):
+        x = float(self.x_input.text().replace(",", "."))
+        y = float(self.y_input.text().replace(",", "."))
+        return x, y
+
+    def _show(self, x, y):
+        self.result_label.setText(f"{format_number(x)}% of {format_number(y)}\n= {format_number(x / 100 * y)}")
+
+    def calculate_live(self):
+        try:
+            self._show(*self._numbers())
+        except ValueError:
+            self.result_label.setText("")
 
     def calculate(self):
         try:
-            x = float(self.x_input.text())
-            y = float(self.y_input.text())
+            x, y = self._numbers()
         except ValueError:
-            QMessageBox.warning(self, "Errore", "Inserisci un numero valido")
+            QMessageBox.warning(self, "Error", "Please enter a valid number")
             return
-
-        fract = x / 100
-        molt = fract * y
-        self.result_label.setText(f"{x} % di {y} = {molt}")
+        self._show(x, y)
 
 
 class Stopwatch(QWidget):
@@ -273,98 +369,131 @@ class Stopwatch(QWidget):
 
         layout = QVBoxLayout()
 
-        group = QGroupBox("Cronometro")
+        group = QGroupBox("Timer")
         form_layout = QFormLayout()
 
         self.time_input = QSpinBox()
         self.time_input.setRange(1, 3600)
-        self.time_input.setSuffix(" secondi")
+        self.time_input.setSuffix(" seconds")
         self.time_input.setValue(10)
-        form_layout.addRow("Imposta un limite di tempo:", self.time_input)
+        self.time_input.valueChanged.connect(self._refresh)
+        form_layout.addRow("Stop after:", self.time_input)
 
         group.setLayout(form_layout)
         layout.addWidget(group)
 
-        self.time_label = QLabel("Secondi trascorsi: 0")
-        layout.addWidget(self.time_label)
+        self.time_label = QLabel("00:00")
+        self.time_label.setObjectName("big")
+        self.time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.time_label, 1)
 
-        btn_start = QPushButton("Reset")
-        btn_start.clicked.connect(self.start)
-        layout.addWidget(btn_start)
+        self.info_label = QLabel("")
+        self.info_label.setObjectName("dim")
+        self.info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.info_label)
 
+        self.progress = QProgressBar()
+        self.progress.setTextVisible(False)
+        layout.addWidget(self.progress)
+
+        buttons = QHBoxLayout()
+        self.btn_start = QPushButton("Start")
+        self.btn_start.setObjectName("primary")
+        self.btn_start.clicked.connect(self.start)
         btn_stop = QPushButton("Stop")
         btn_stop.clicked.connect(self.stop)
-        layout.addWidget(btn_stop)
-
-        btn_restart = QPushButton("Start")
-        btn_restart.clicked.connect(self.restart)
-        layout.addWidget(btn_restart)
+        btn_reset = QPushButton("Reset")
+        btn_reset.clicked.connect(self.reset)
+        for b in (self.btn_start, btn_stop, btn_reset):
+            b.setMinimumHeight(36)
+            buttons.addWidget(b)
+        layout.addLayout(buttons)
 
         self.setLayout(layout)
 
-        self.timer = QTimer()
+        self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_time)
+        self._refresh()
+
+    def _refresh(self):
+        self.target = self.time_input.value()
+        self.progress.setMaximum(self.target)
+        self.progress.setValue(min(self.elapsed, self.target))
+        minutes, seconds = divmod(self.elapsed, 60)
+        self.time_label.setText(f"{minutes:02d}:{seconds:02d}")
+        self.info_label.setText(f"{self.elapsed} of {self.target} seconds")
 
     def start(self):
-        self.elapsed = 0
-        self.target = self.time_input.value()
-        self.time_label.setText(f"Secondi trascorsi: {self.elapsed}")
+        """Start, or resume after Stop. After the limit it starts again from 0."""
+        if self.elapsed >= self.time_input.value():
+            self.elapsed = 0
+        self._refresh()
         self.timer.start(1000)
+        self.btn_start.setText("Start")
 
     def stop(self):
         self.timer.stop()
+        if self.elapsed:
+            self.btn_start.setText("Resume")
 
-    def restart(self):
-        self.target = self.time_input.value()
-        self.time_label.setText(f"Secondi trascorsi: {self.elapsed}")
-        self.timer.start(1000)
+    def reset(self):
+        self.timer.stop()
+        self.elapsed = 0
+        self.btn_start.setText("Start")
+        self._refresh()
 
     def update_time(self):
         self.elapsed += 1
-        self.time_label.setText(f"Secondi trascorsi: {self.elapsed}")
+        self._refresh()
         if self.elapsed >= self.target:
             self.timer.stop()
-            QMessageBox.information(self, "Tempo scaduto", f"Sono passati {self.target} secondi, fermo il conteggio")
+            QApplication.beep()
+            QMessageBox.information(
+                self, "Time's up",
+                f"{self.target} seconds have passed, the timer has stopped."
+            )
 
 
 class ClickableLabel(QLabel):
     def mousePressEvent(self, event):
         self.clicked()
+
     def clicked(self):
         pass
 
-
-import json
-import pathlib
 
 class MultiCalculatorApp(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("MultiCalculator")
-
-        self.config_dir = pathlib.Path.home() / ".config" / "pylauncher_settings"
-        self.config_dir.mkdir(parents=True, exist_ok=True)
-        self.theme_config_file = self.config_dir / "theme_config.json"
+        self.resize(420, 560)
 
         self.tabs = QTabWidget()
         self.calc = Calculator()
         self.perc = PercentualCalculator()
         self.cron = Stopwatch()
 
-        self.tabs.addTab(self.calc, "Calcolatrice")
-        self.tabs.addTab(self.perc, "Calcolatore Percentuale")
-        self.tabs.addTab(self.cron, "Cronometro")
+        self.tabs.addTab(self.calc, "CALCULATOR")
+        self.tabs.addTab(self.perc, "PERCENT")
+        self.tabs.addTab(self.cron, "TIMER")
+        self.tabs.currentChanged.connect(lambda _i: self.tabs.currentWidget().setFocus())
 
-        self.theme = "dark"
-        self.label_toggle_theme = ClickableLabel("Dark Mode")
-        self.label_toggle_theme.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.label_toggle_theme = ClickableLabel("")
+        self.label_toggle_theme.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        self.label_toggle_theme.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.label_toggle_theme.setToolTip("Toggle theme (Ctrl+T)")
         self.label_toggle_theme.clicked = self.toggle_theme
 
-        self.load_theme_config()
+        self.theme = skcommon.load_theme()
         self.apply_theme()
 
-        self.btn_back_home = QPushButton("Back to Home")
+        self.btn_back_home = QPushButton("←  HOME")
+        self.btn_back_home.setObjectName("secondary")
         self.btn_back_home.setFixedSize(100, 30)
+        self.btn_back_home.setToolTip("Back to the launcher (Esc)")
+        self.btn_back_home.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_back_home.clicked.connect(self.back_to_home)
 
         top_layout = QHBoxLayout()
@@ -376,152 +505,61 @@ class MultiCalculatorApp(QWidget):
         main_layout.addLayout(top_layout)
         main_layout.addWidget(self.tabs)
         self.setLayout(main_layout)
+        self.calc.setFocus()
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape:
+        key = event.key()
+        mods = event.modifiers()
+        ctrl = Qt.KeyboardModifier.ControlModifier
+        if key == Qt.Key.Key_Escape:
             self.back_to_home()
-        elif event.key() == Qt.Key_C and event.modifiers() & Qt.ControlModifier:
+        elif key == Qt.Key.Key_C and mods & ctrl:
             self.back_to_home()
-        elif event.key() == Qt.Key_T and event.modifiers() & Qt.ControlModifier:
+        elif key == Qt.Key.Key_T and mods & ctrl:
             self.toggle_theme()
-        elif event.key() == Qt.Key_I and event.modifiers() & Qt.ControlModifier:
+        elif key == Qt.Key.Key_I and mods & ctrl:
             self.show_shortcuts()
+        else:
+            super().keyPressEvent(event)
 
     def show_shortcuts(self):
-        from PyQt5.QtWidgets import QMessageBox
         shortcuts_text = (
             "Shortcuts:\n"
             "Ctrl+T: Toggle theme (Light/Dark)\n"
-            "Ctrl+C: Go back to the home\n"
-            "Escape: Show Categories (home)\n"
+            "Ctrl+C: Go back to the launcher\n"
+            "Escape: clear the display, press it again to go back to the launcher\n"
+            "Enter or =: calculate, Backspace: delete, Delete: clear all\n"
             "Ctrl+I: Show this shortcuts window\n"
         )
         QMessageBox.information(self, "Keyboard Shortcuts", shortcuts_text)
 
     def toggle_theme(self):
-        if self.theme == "dark":
-            self.theme = "light"
-        else:
-            self.theme = "dark"
+        self.theme = "light" if self.theme == "dark" else "dark"
         self.apply_theme()
-        self.save_theme_config()
+        skcommon.save_theme(self.theme)
 
     def apply_theme(self):
-        if self.theme == "dark":
-            self.setStyleSheet("""
-                QWidget {
-                    background-color: #2b2b2b;
-                    color: #f0f0f0;
-                }
-                QPushButton {
-                    background-color: #444444;
-                    color: #f0f0f0;
-                    border: 1px solid #555555;
-                    padding: 5px;
-                    border-radius: 3px;
-                }
-                QPushButton:hover {
-                    background-color: #555555;
-                }
-                QLineEdit {
-                    background-color: #3c3c3c;
-                    color: #f0f0f0;
-                    border: 1px solid #555555;
-                    padding: 5px;
-                    border-radius: 3px;
-                }
-                QTabWidget::pane {
-                    border: 1px solid #555555;
-                }
-                QTabBar::tab {
-                    background: #444444;
-                    color: #f0f0f0;
-                    padding: 5px;
-                    border: 1px solid #555555;
-                    border-bottom-color: #2b2b2b;
-                    border-radius: 3px;
-                }
-                QTabBar::tab:selected {
-                    background: #2b2b2b;
-                    border-color: #f0f0f0;
-                }
-            """)
-            self.label_toggle_theme.setText("Dark")
-            self.label_toggle_theme.setStyleSheet("color: white; text-decoration: none; padding: 5px;")
-        else:
-            self.setStyleSheet("""
-                QWidget {
-                    background-color: #f0f0f0;
-                    color: #2b2b2b;
-                }
-                QPushButton {
-                    background-color: #e0e0e0;
-                    color: #2b2b2b;
-                    border: 1px solid #cccccc;
-                    padding: 5px;
-                    border-radius: 3px;
-                }
-                QPushButton:hover {
-                    background-color: #d0d0d0;
-                }
-                QLineEdit {
-                    background-color: #ffffff;
-                    color: #2b2b2b;
-                    border: 1px solid #cccccc;
-                    padding: 5px;
-                    border-radius: 3px;
-                }
-                QTabWidget::pane {
-                    border: 1px solid #cccccc;
-                }
-                QTabBar::tab {
-                    background: #e0e0e0;
-                    color: #2b2b2b;
-                    padding: 5px;
-                    border: 1px solid #cccccc;
-                    border-bottom-color: #f0f0f0;
-                    border-radius: 3px;
-                }
-                QTabBar::tab:selected {
-                    background: #f0f0f0;
-                    border-color: #2b2b2b;
-                }
-            """)
-            self.label_toggle_theme.setText("Light")
-            self.label_toggle_theme.setStyleSheet("color: black; text-decoration: none; padding: 5px;")
+        palette = dict(PALETTES.get(self.theme, PALETTES["dark"]), font=FONT)
+        self.setStyleSheet(STYLESHEET.substitute(palette))
+        # it names the theme you switch to, like the launcher and the wizard
+        self.label_toggle_theme.setText("☀  LIGHT" if self.theme == "dark" else "☾  DARK")
+        self.label_toggle_theme.setStyleSheet(
+            f"color: {palette['muted']}; padding: 5px; letter-spacing: 1px;"
+        )
 
     def back_to_home(self):
-        # Ottieni il percorso della directory del file corrente
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        # Costruisci il percorso completo a launcher.py
         launcher_path = os.path.join(current_dir, "launcher.py")
-    
-        # Launch launcher.py e close current app
-        subprocess.Popen([sys.executable, launcher_path])
+        subprocess.Popen([sys.executable, launcher_path], start_new_session=True)
         self.close()
 
-    def load_theme_config(self):
-        try:
-            if self.theme_config_file.exists():
-                with open(self.theme_config_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                theme = data.get("theme", "dark")
-                self.theme = theme
-            else:
-                self.theme = "dark"
-        except Exception as e:
-            print(f"Error loading theme config: {e}")
-
-    def save_theme_config(self):
-        try:
-            data = {"theme": self.theme}
-            with open(self.theme_config_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f)
-        except Exception as e:
-            print(f"Error saving theme config: {e}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setApplicationName(APP_ID)
+    QGuiApplication.setDesktopFileName(APP_ID)
     window = MultiCalculatorApp()
+    skcommon.prepare_window(window)
+    skcommon.center_window(window)
     window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
