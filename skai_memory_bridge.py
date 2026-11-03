@@ -54,14 +54,16 @@ def remember_turn(mem, app, question, reply):
 
 
 def around_turn(app, request, ask):
-    """Run ask(request) with the memory block added to the history, then record the exchange."""
+    """Run ask(request) with the memory block added to the user message, then record the exchange."""
     mem = _open(app)
     question = str(request.get("user_message", ""))
     req = request
     if mem and question:
         ctx = recall_text(mem, question)
         if ctx:
-            req = dict(request, history=[{"role": "system", "content": ctx}] + list(request.get("history") or []))
+            # Appended to the user's message, not put in the history: the apps trim the history to the last
+            # user turn, which would silently drop a system message placed there.
+            req = dict(request, user_message=question + "\n\n[" + ctx + "]")
     result, model = ask(req)
     if mem and question and isinstance(result, dict) and result.get("message"):
         remember_turn(mem, app, question, str(result["message"]))
