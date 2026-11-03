@@ -1,6 +1,6 @@
 """Glue between an extension/app and SKAI_ Memory (library skai_memory). Stdlib only.
 
-    result, model = around_turn("sk_libre_writer", request, ask_turn)
+    result, model = around_turn("sk_office_writer", request, ask_turn)
 
 Before the turn it looks in the shared memory for what other SKAI apps know about the user's
 message and hands it to the model as one extra system message; after the turn it keeps a short
