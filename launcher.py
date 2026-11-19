@@ -23,6 +23,7 @@ from PySide6.QtCore import Signal
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # skcommon, safe_math
 import skcommon
+import skai_memory_bridge as memory_bridge  # SKAI_ Memory: shared memory of the SKAI apps (optional)
 from skcommon import PALETTES, FONT, CONFIG_DIR
 
 ICON_DIR = "/usr/share/icons/Ars-Dark-Icons/apps/48"
@@ -749,7 +750,12 @@ class AppLauncher(QtWidgets.QMainWindow):
             "If the user asks to open an app, confirm the result. "
             "Always answer in English, briefly."
         )
-        messages = [{"role": "system", "content": system_prompt}] + self.conversation_history
+        # SKAI_ Memory: what the other SKAI apps know about this question (nothing when it is not installed)
+        memory = memory_bridge.open_memory("launcher")
+        if memory:
+            system_prompt += "\n\n" + memory_bridge.recall_text(memory, message)
+        self._last_question = message
+        messages = [{"role": "system", "content": system_prompt.rstrip()}] + self.conversation_history
 
         self.typing_label.setText("● Ollama is answering…")
         self._set_busy(True)
@@ -806,8 +812,16 @@ class AppLauncher(QtWidgets.QMainWindow):
         self.typing_label.setText("")
         self._append_chat_html(' <span class="sys">(stopped)</span>' if stopped else "")
         self.conversation_history.append({"role": "assistant", "content": full_text})
+        if not stopped and full_text.strip():
+            threading.Thread(target=self._remember_exchange, args=(full_text,), daemon=True).start()
         self._set_busy(False)
         self.chat_input.setFocus()
+
+    def _remember_exchange(self, answer: str):
+        """Keep the exchange in this app's notes of SKAI_ Memory (off the UI thread: it runs the sudo helper)."""
+        memory = memory_bridge.open_memory("launcher")
+        if memory:
+            memory_bridge.remember_turn(memory, "launcher", getattr(self, "_last_question", ""), answer)
 
     def _on_response_error(self, request_id: int, error_msg: str):
         if request_id != self._request_id:
