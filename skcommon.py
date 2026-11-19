@@ -2,11 +2,14 @@
 # Licensed under GNU GPL v3 or later — see the LICENSE file or <https://www.gnu.org/licenses/>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Shared pieces of the Skorpion launcher, multicalculator and guide:
-the wizard-style colour themes and the desktop environment we run in
-(Hyprland or i3; the Cinnamon release ships only the setup wizard)."""
+"""Shared pieces of the Skorpion launcher, multicalculator, guide and SKAI
+Manager: the wizard-style colour themes, the desktop environment we run in
+and the choice of the Ollama model. Launcher, multicalculator and guide are
+in the Lite (i3) and Mantis (Hyprland) editions; SKAI Manager is in every
+edition, Cinnamon included (there desktop() answers 'other')."""
 
 import os
+import re
 import json
 import shutil
 import pathlib
@@ -69,6 +72,42 @@ def desktop() -> str:
 
 
 DESKTOP_NAMES = {"hyprland": "Hyprland", "i3": "i3", "other": "Linux"}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# OLLAMA MODEL: every SKAI app uses the installed model with the most
+# parameters (details.parameter_size of /api/tags, e.g. "14.8B", "494.03M");
+# the size on disk only breaks ties, or decides when Ollama gives no count.
+# ──────────────────────────────────────────────────────────────────────────
+
+_PARAMETERS = re.compile(r"([\d.]+)\s*([KMBT]?)", re.IGNORECASE)
+_SCALE = {"": 1, "K": 1e3, "M": 1e6, "B": 1e9, "T": 1e12}
+
+
+def parameter_count(model: dict) -> float:
+    """Parameters of one entry of /api/tags; 0 when unknown."""
+    text = str((model.get("details") or {}).get("parameter_size") or "").strip()
+    match = _PARAMETERS.match(text)
+    if not match:
+        return 0.0
+    try:
+        return float(match.group(1)) * _SCALE[match.group(2).upper()]
+    except ValueError:
+        return 0.0
+
+
+def biggest_model(models):
+    """The entry of /api/tags with the most parameters (None for no models)."""
+    if not models:
+        return None
+    return max(models, key=lambda m: (parameter_count(m), m.get("size", 0) or 0))
+
+
+# Shown by every SKAI tool when Ollama cannot be reached or has no model.
+AI_UNAVAILABLE_TITLE = "AI unavailable"
+AI_UNAVAILABLE_MESSAGE = ("AI features are disabled.\n"
+                          "It looks like you turned off AI in the SKAI settings.\n"
+                          "Without a selected model, SKAI cannot function.")
 
 
 def is_wayland() -> bool:

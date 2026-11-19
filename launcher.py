@@ -300,17 +300,14 @@ def start_detached(argv, cwd=None):
 # ──────────────────────────────────────────────────────────────────────────
 
 def detect_ollama_model():
-    """Asks Ollama's /api/tags for the largest installed model.
-    Returns None if Ollama is not reachable or has no models."""
+    """Asks Ollama's /api/tags for the installed model with the most
+    parameters. Returns None if Ollama is not reachable or has no models."""
     try:
         resp = requests.get(f"{OLLAMA_URL}/api/tags", timeout=3)
         if not resp.ok:
             return None
-        models = resp.json().get("models", [])
-        if not models:
-            return None
-        best = max(models, key=lambda m: m.get("size", 0))
-        return best["name"]
+        best = skcommon.biggest_model(resp.json().get("models", []))
+        return best["name"] if best else None
     except Exception:
         return None
 
@@ -678,11 +675,7 @@ class AppLauncher(QtWidgets.QMainWindow):
         self.ollama_model = model
         if not model:
             self.model_label.setText("SKAI ASSISTANT")
-            self.chat_state_label.setText(
-                "AI features are turned off.\n\n"
-                "Ollama is not running or has no model installed, so the "
-                "assistant can't work. The launcher itself works as usual."
-            )
+            self.chat_state_label.setText(skcommon.AI_UNAVAILABLE_MESSAGE)
             self.retry_button.show()
             self.chat_stack.setCurrentIndex(0)
             return
