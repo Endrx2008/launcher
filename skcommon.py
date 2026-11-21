@@ -19,7 +19,8 @@ THEME_FILE = CONFIG_DIR / "theme_config.json"
 
 FONT = "'JetBrains Mono', 'JetBrainsMono Nerd Font', 'Fira Code', monospace"
 
-# Same colours as the SKAI setup wizard (dark), plus a light version of them.
+# The Skorpion colours (dark) and their light version: the launcher, SKAI Manager and the SKAI setup
+# wizard all take them from here.
 PALETTES = {
     "dark": {
         "bg": "#0d0d0d", "bg2": "#141414", "bg3": "#1c1c1c", "hover": "#222222",
@@ -27,6 +28,7 @@ PALETTES = {
         "text": "#e8e8e8", "muted": "#9a9a9a", "dim": "#666666",
         "border": "#2a2a2a", "green": "#39d353", "red": "#ff4444", "blue": "#4da6ff",
         "select": "rgba(224, 92, 0, 0.22)", "disabled": "#333333",
+        "purple": "#cc88ff", "pink": "#ff6666",
     },
     "light": {
         "bg": "#f6f4f1", "bg2": "#ffffff", "bg3": "#efebe6", "hover": "#e8e3dc",
@@ -34,6 +36,7 @@ PALETTES = {
         "text": "#1a1a1a", "muted": "#5e5a55", "dim": "#8a8580",
         "border": "#d9d3cb", "green": "#1a7f37", "red": "#cf222e", "blue": "#0b63c5",
         "select": "rgba(199, 82, 0, 0.16)", "disabled": "#e3ded7",
+        "purple": "#8250df", "pink": "#c93c3c",
     },
 }
 

@@ -4,10 +4,10 @@ Import it from anything that runs Python 3: scripts, LibreOffice .oxt, sk_notes,
 (The JavaScript twin for .xpi add-ons is skai_memory.js: same methods, same results.)
 
     from skai_memory import Memory
-    m = Memory("skmail")                          # identifies the app; /var/lib/skai/SKAI_ Memory (or $SKAI_MEMORY_DIR)
+    m = Memory("sk_mail")                         # identifies the app; /var/lib/skai/SKAI_ Memory (or $SKAI_MEMORY_DIR)
     for hit in m.search("meeting with Anna"):     # reads everything, every app's notes
         print(hit["path"], hit["score"], hit["snippet"])
-    m.remember("inbox", "Anna asked to move the meeting", links=["[[skalendar]]"])   # only plugins/skmail/**
+    m.remember("inbox", "Anna asked to move the meeting", links=["[[plugins/sk_office]]"])   # only plugins/sk_mail/**
 
 The vault is a folder of Markdown notes that link to each other ([[wikilinks]] between notes,
 ordinary links to files, URLs and skai://app/<name>). search() finds the best notes and then
@@ -41,6 +41,15 @@ _FRONT = re.compile(r"\A---\n(.*?)\n---\n?", re.S)
 _HEAD = re.compile(r"^#{1,6}\s+(.+)$", re.M)
 _WORD = re.compile(r"\w{2,}", re.U)
 _NAME = re.compile(r"^[a-z0-9][a-z0-9_-]{1,39}$")
+# Words that say nothing about where the answer is: they never place the snippet (unless nothing else matches).
+_STOP = frozenset("""
+a an and are as at be but by can could did do does for from had has have how i if in into is it its me my no not
+of on or our please say said she so that the their them then there these they this to us was we were what when
+where which who why will with would you your about also just tell know remember
+al alla alle allo ai agli anche che chi ci come con cosa da dal dalla dei del della delle di dove e ed gli ha hai
+ho il in io la le lo ma mi mio mia ne nei nel nella no non o per perché più quale quando quello questa questo se
+si sono su sul sulla tu un una uno va vi sai dimmi ricordi
+""".split())
 
 
 class MemoryError_(Exception):
@@ -72,6 +81,36 @@ def edge_style(a: dict, b: dict) -> str:
     return "solid" if "app" in (a["kind"], b["kind"]) else "dashed"
 
 
+def _hit(word: str, term: str) -> bool:
+    """Whole-word match; a word may also extend a term of 4+ letters (meeting -> meetings)."""
+    return word == term or (len(term) >= 4 and word.startswith(term))
+
+
+def snippet(text: str, weights: dict[str, float], width: int = 240) -> str:
+    """The part of ``text`` that best covers the query: the window holding the most (rarest) query words.
+
+    weights  {query word: importance}, e.g. its idf; stopwords count only when nothing else matches.
+    Words are matched whole (no substrings); on a tie the later window wins, since notes grow downwards
+    and the newest entry of a daily chat is at the bottom."""
+    terms = {t: w for t, w in weights.items() if t not in _STOP} or dict(weights)
+    hits = []
+    for m in _WORD.finditer(text):
+        word = m.group().lower()
+        for t in terms:
+            if _hit(word, t):
+                hits.append((m.start(), t))
+                break
+    pos = 0
+    if hits:
+        best = -1.0
+        for i, (start, _) in enumerate(hits):
+            seen = {t for p, t in hits[i:] if p < start + width - 40}
+            score = sum(terms[t] for t in seen)
+            if score >= best:
+                best, pos = score, start
+    return text[max(0, pos - 40): pos + width].replace("\n", " ").strip()
+
+
 def slug(text: str) -> str:
     s = re.sub(r"[^\w\-]+", "-", text.strip().lower(), flags=re.U).strip("-")
     return s[:60] or "note"
@@ -79,7 +118,7 @@ def slug(text: str) -> str:
 
 class Memory:
     def __init__(self, app: str | None = None, root: str | os.PathLike | None = None):
-        """app: who is using the library (a name like "skmail"); needed to write, optional to read."""
+        """app: who is using the library (a name like "sk_mail"); needed to write, optional to read."""
         if app is not None and not _NAME.match(app):
             raise MemoryError_(f"app name must match [a-z0-9][a-z0-9_-]{{1,39}}: {app!r}")
         self.app = app
@@ -204,16 +243,10 @@ class Memory:
                         found[t] = (sc, r)
             frontier = nxt
         ranked = sorted(found, key=lambda r: found[r][0], reverse=True)[: limit * 2]
+        weights = {t: math.log(1 + n_docs / (1 + df[t])) for t in set(q)}
         return [{"path": r, "title": notes[r]["title"], "app": notes[r]["app"], "kind": notes[r]["kind"],
-                 "score": round(found[r][0], 3), "via": found[r][1], "snippet": self._snippet(notes[r]["text"], q),
+                 "score": round(found[r][0], 3), "via": found[r][1], "snippet": snippet(notes[r]["text"], weights),
                  "external": notes[r]["external"]} for r in ranked]
-
-    @staticmethod
-    def _snippet(text: str, q: list[str], width: int = 160) -> str:
-        low = text.lower()
-        pos = min((i for i in (low.find(t) for t in q) if i >= 0), default=0)
-        s = text[max(0, pos - 40): pos + width].replace("\n", " ").strip()
-        return s
 
     # ------------------------------------------------------------------ writing
     def register(self) -> str:
